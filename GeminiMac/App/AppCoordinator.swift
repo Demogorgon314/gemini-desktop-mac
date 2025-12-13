@@ -42,6 +42,9 @@ class AppCoordinator {
         wv.allowsBackForwardNavigationGestures = true
         wv.allowsLinkPreview = true
 
+        // Set custom User-Agent to appear as Safari (fixes Google login blocking WebViews)
+        wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+
         // Apply saved page zoom
         let savedZoom = UserDefaults.standard.double(forKey: "pageZoom")
         wv.pageZoom = savedZoom > 0 ? savedZoom : 1.0
@@ -60,7 +63,15 @@ class AppCoordinator {
         urlObserver = wv.observe(\.url, options: .new) { [weak self] webView, _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                if self.isAtHome, webView.url != Self.geminiURL {
+                guard let currentURL = webView.url else { return }
+
+                // Check if we're at the Gemini home/app page
+                let isGeminiApp = currentURL.host == "gemini.google.com" && currentURL.path.hasPrefix("/app")
+
+                if isGeminiApp {
+                    self.isAtHome = true
+                    self.canGoBack = false
+                } else {
                     self.isAtHome = false
                     self.canGoBack = webView.canGoBack
                 }

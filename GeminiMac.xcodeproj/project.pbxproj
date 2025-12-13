@@ -15,7 +15,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		74CBD8C12EED900100F226E3 /* Exceptions for "GeminiMac" folder in "GeminiMac" target */ = {
+		749D14D32EEDF4070054BA29 /* Exceptions for "GeminiMac" folder in "GeminiMac" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -28,7 +28,7 @@
 		74CBD8AC2EED8FCB00F226E3 /* GeminiMac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				74CBD8C12EED900100F226E3 /* Exceptions for "GeminiMac" folder in "GeminiMac" target */,
+				749D14D32EEDF4070054BA29 /* Exceptions for "GeminiMac" folder in "GeminiMac" target */,
 			);
 			path = GeminiMac;
 			sourceTree = "<group>";

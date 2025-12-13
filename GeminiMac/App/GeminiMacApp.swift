@@ -40,6 +40,13 @@ struct GeminiMacApp: App {
         }
         .defaultSize(width: 1300, height: 1000)
 
+        // Menu Bar
+        MenuBarExtra {
+            MenuBarContentView(coordinator: coordinator)
+        } label: {
+            Image(systemName: "sparkle")
+        }
+        .menuBarExtraStyle(.menu)
     }
 
     init() {
