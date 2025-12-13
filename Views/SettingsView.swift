@@ -3,15 +3,6 @@ import KeyboardShortcuts
 import WebKit
 import ServiceManagement
 
-extension SettingsView {
-    struct Constants {
-        static let defaultPageZoom: Double = 1.0
-        static let minPageZoom: Double = 0.8
-        static let maxPageZoom: Double = 1.2
-        static let pageZoomStep: Double = 0.01
-    }
-}
-
 struct SettingsView: View {
     @Binding var coordinator: AppCoordinator
     @AppStorage(UserDefaultsKeys.pageZoom.rawValue) private var pageZoom: Double = Constants.defaultPageZoom
@@ -82,4 +73,15 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+extension SettingsView {
+
+    struct Constants {
+        static let defaultPageZoom: Double = 1.0
+        static let minPageZoom: Double = 0.8
+        static let maxPageZoom: Double = 1.2
+        static let pageZoomStep: Double = 0.01
+    }
+
 }

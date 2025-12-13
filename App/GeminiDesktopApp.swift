@@ -48,7 +48,7 @@ struct GeminiDesktopApp: App {
         .defaultSize(width: Constants.settingsWindowMinWidth, height: Constants.settingsWindowMinHeight)
 
         MenuBarExtra {
-            MenuBarContentView(coordinator: $coordinator)
+            MenuBarView(coordinator: $coordinator)
         } label: {
             Image(systemName: Constants.menuBarIcon)
                 .onAppear {
@@ -73,54 +73,6 @@ struct GeminiDesktopApp: App {
     init() {
         KeyboardShortcuts.onKeyDown(for: .bringToFront) { [self] in
             coordinator.toggleChatBar()
-        }
-    }
-
-    private func openSettingsWindow() {
-        if let settingsWindow = NSApp.windows.first(where: {
-            $0.identifier?.rawValue == GeminiDesktopApp.Constants.settingsWindowID || $0.title == GeminiDesktopApp.Constants.settingsWindowTitle
-        }) {
-            settingsWindow.makeKeyAndOrderFront(nil)
-        } else {
-            openWindow(id: GeminiDesktopApp.Constants.settingsWindowID)
-        }
-        NSApp.activate(ignoringOtherApps: true)
-    }
-}
-
-// MARK: - Menu Bar Content View
-struct MenuBarContentView: View {
-    @Binding var coordinator: AppCoordinator
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some View {
-        Group {
-            Button("Open Gemini Desktop") {
-                coordinator.openMainWindow()
-            }
-
-            Button("Toggle Chat Bar") {
-                coordinator.toggleChatBar()
-            }
-
-            Divider()
-
-            Button("Settings...") {
-                openSettingsWindow()
-            }
-            .keyboardShortcut(",", modifiers: .command)
-
-            Divider()
-
-            Button("Quit") {
-                NSApp.terminate(nil)
-            }
-            .keyboardShortcut("q", modifiers: .command)
-        }
-        .onAppear {
-            coordinator.openWindowAction = { id in
-                openWindow(id: id)
-            }
         }
     }
 

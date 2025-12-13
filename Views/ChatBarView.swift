@@ -8,15 +8,6 @@
 import SwiftUI
 import WebKit
 
-extension ChatBarView {
-    struct Constants {
-        static let buttonFontSize: CGFloat = 14
-        static let buttonSize: CGFloat = 38
-        static let buttonPadding: CGFloat = 16
-        static let buttonOffsetX: CGFloat = -2
-    }
-}
-
 struct ChatBarView: View {
     @ObservedObject var expandedState: AppCoordinator.ExpandedState
 
@@ -40,4 +31,15 @@ struct ChatBarView: View {
             .offset(x: Constants.buttonOffsetX)
         }
     }
+}
+
+extension ChatBarView {
+
+    struct Constants {
+        static let buttonFontSize: CGFloat = 14
+        static let buttonSize: CGFloat = 38
+        static let buttonPadding: CGFloat = 16
+        static let buttonOffsetX: CGFloat = -2
+    }
+
 }
