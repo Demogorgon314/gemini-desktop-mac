@@ -161,6 +161,9 @@ class AppCoordinator {
     }
 
     func openMainWindow() {
+        // Hide chat bar first - WebView can only be in one view hierarchy
+        hideChatBar()
+
         NSApp.setActivationPolicy(.regular)
 
         // Find existing main window (may be hidden/suppressed)
