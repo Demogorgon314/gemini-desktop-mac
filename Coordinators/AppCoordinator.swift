@@ -14,19 +14,6 @@ extension Notification.Name {
     static let openMainWindow = Notification.Name("openMainWindow")
 }
 
-extension AppCoordinator {
-    struct Constants {
-        static let geminiURL = URL(string: "https://gemini.google.com/app")!
-        static let geminiHost = "gemini.google.com"
-        static let geminiAppPath = "/app"
-        static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
-        static let defaultPageZoom: Double = 1.0
-        static let dockOffset: CGFloat = 50
-        static let mainWindowIdentifier = "main"
-        static let mainWindowTitle = "Gemini Desktop"
-    }
-}
-
 @Observable
 class AppCoordinator {
     private var chatBar: ChatBarPanel?
@@ -191,4 +178,20 @@ class AppCoordinator {
 
         NSApp.activate(ignoringOtherApps: true)
     }
+}
+
+
+extension AppCoordinator {
+
+    struct Constants {
+        static let geminiURL = URL(string: "https://gemini.google.com/app")!
+        static let geminiHost = "gemini.google.com"
+        static let geminiAppPath = "/app"
+        static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        static let defaultPageZoom: Double = 1.0
+        static let dockOffset: CGFloat = 50
+        static let mainWindowIdentifier = "main"
+        static let mainWindowTitle = "Gemini Desktop"
+    }
+
 }

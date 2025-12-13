@@ -8,14 +8,6 @@
 import SwiftUI
 import WebKit
 
-extension GeminiWebView {
-    struct Constants {
-        static let textFieldWidth: CGFloat = 200
-        static let textFieldHeight: CGFloat = 24
-        static let trustedHost = "google.com"
-    }
-}
-
 struct GeminiWebView: NSViewRepresentable {
     let webView: WKWebView
 
@@ -135,4 +127,15 @@ class WebViewContainer: NSView {
         webView.uiDelegate = coordinator
         addSubview(webView)
     }
+}
+
+
+extension GeminiWebView {
+
+    struct Constants {
+        static let textFieldWidth: CGFloat = 200
+        static let textFieldHeight: CGFloat = 24
+        static let trustedHost = "google.com"
+    }
+
 }

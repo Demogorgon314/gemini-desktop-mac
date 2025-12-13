@@ -9,24 +9,6 @@ import SwiftUI
 import AppKit
 import WebKit
 
-extension ChatBarPanel {
-    struct Constants {
-        static let defaultWidth: CGFloat = 500
-        static let defaultHeight: CGFloat = 200
-        static let minWidth: CGFloat = 300
-        static let minHeight: CGFloat = 150
-        static let maxWidth: CGFloat = 900
-        static let maxHeight: CGFloat = 900
-        static let cornerRadius: CGFloat = 30
-        static let borderWidth: CGFloat = 0.5
-        static let expandedScreenRatio: CGFloat = 0.7
-        static let animationDuration: Double = 0.3
-        static let pollingInterval: TimeInterval = 1.0
-        static let initialPollingDelay: TimeInterval = 3.0
-        static let webViewSearchDelay: TimeInterval = 0.5
-    }
-}
-
 class ChatBarPanel: NSPanel, NSWindowDelegate {
 
     private var initialSize: NSSize {
@@ -226,4 +208,25 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+}
+
+
+extension ChatBarPanel {
+
+    struct Constants {
+        static let defaultWidth: CGFloat = 500
+        static let defaultHeight: CGFloat = 200
+        static let minWidth: CGFloat = 300
+        static let minHeight: CGFloat = 150
+        static let maxWidth: CGFloat = 900
+        static let maxHeight: CGFloat = 900
+        static let cornerRadius: CGFloat = 30
+        static let borderWidth: CGFloat = 0.5
+        static let expandedScreenRatio: CGFloat = 0.7
+        static let animationDuration: Double = 0.3
+        static let pollingInterval: TimeInterval = 1.0
+        static let initialPollingDelay: TimeInterval = 3.0
+        static let webViewSearchDelay: TimeInterval = 0.5
+
+    }
 }

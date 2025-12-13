@@ -45,7 +45,7 @@
 			);
 			target = 74CBD8A92EED8FCB00F226E3 /* GeminiDesktop */;
 		};
-		749D25F42EEE2C330054BA29 /* Exceptions for "Windows" folder in "GeminiDesktop" target */ = {
+		749D26102EEE2E930054BA29 /* Exceptions for "Windows" folder in "GeminiDesktop" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ChatBarPanel.swift,
@@ -95,7 +95,7 @@
 		749D25E32EEE2C330054BA29 /* Windows */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				749D25F42EEE2C330054BA29 /* Exceptions for "Windows" folder in "GeminiDesktop" target */,
+				749D26102EEE2E930054BA29 /* Exceptions for "Windows" folder in "GeminiDesktop" target */,
 			);
 			path = Windows;
 			sourceTree = "<group>";
