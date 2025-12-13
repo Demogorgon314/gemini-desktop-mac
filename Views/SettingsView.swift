@@ -3,10 +3,19 @@ import KeyboardShortcuts
 import WebKit
 import ServiceManagement
 
+extension SettingsView {
+    struct Constants {
+        static let defaultPageZoom: Double = 1.0
+        static let minPageZoom: Double = 0.8
+        static let maxPageZoom: Double = 1.2
+        static let pageZoomStep: Double = 0.01
+    }
+}
+
 struct SettingsView: View {
     @Binding var coordinator: AppCoordinator
-    @AppStorage("pageZoom") private var pageZoom: Double = 1.0
-    @AppStorage("hideWindowAtLaunch") private var hideWindowAtLaunch: Bool = false
+    @AppStorage(UserDefaultsKeys.pageZoom.rawValue) private var pageZoom: Double = Constants.defaultPageZoom
+    @AppStorage(UserDefaultsKeys.hideWindowAtLaunch.rawValue) private var hideWindowAtLaunch: Bool = false
     
     @State private var showingResetAlert = false
     @State private var isClearing = false
@@ -33,7 +42,7 @@ struct SettingsView: View {
             Section("Appearance") {
                 HStack {
                     Text("Text Size:")
-                    Slider(value: $pageZoom, in: 0.8...1.2, step: 0.01)
+                    Slider(value: $pageZoom, in: Constants.minPageZoom...Constants.maxPageZoom, step: Constants.pageZoomStep)
                         .onChange(of: pageZoom) { coordinator.webView.pageZoom = $1 }
                     Text("\(Int(pageZoom * 100))%")
                         .font(.system(.body, design: .monospaced))

@@ -8,6 +8,14 @@
 import SwiftUI
 import WebKit
 
+extension GeminiWebView {
+    struct Constants {
+        static let textFieldWidth: CGFloat = 200
+        static let textFieldHeight: CGFloat = 24
+        static let trustedHost = "google.com"
+    }
+}
+
 struct GeminiWebView: NSViewRepresentable {
     let webView: WKWebView
 
@@ -53,7 +61,7 @@ struct GeminiWebView: NSViewRepresentable {
             alert.addButton(withTitle: "OK")
             alert.addButton(withTitle: "Cancel")
 
-            let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+            let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: GeminiWebView.Constants.textFieldWidth, height: GeminiWebView.Constants.textFieldHeight))
             textField.stringValue = defaultText ?? ""
             alert.accessoryView = textField
 
@@ -61,7 +69,7 @@ struct GeminiWebView: NSViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-            decisionHandler(origin.host.contains("google.com") ? .grant : .prompt)
+            decisionHandler(origin.host.contains(GeminiWebView.Constants.trustedHost) ? .grant : .prompt)
         }
     }
 }

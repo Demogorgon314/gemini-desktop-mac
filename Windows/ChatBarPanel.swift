@@ -9,24 +9,39 @@ import SwiftUI
 import AppKit
 import WebKit
 
-class ChatBar: NSPanel, NSWindowDelegate {
+extension ChatBarPanel {
+    struct Constants {
+        static let defaultWidth: CGFloat = 500
+        static let defaultHeight: CGFloat = 200
+        static let minWidth: CGFloat = 300
+        static let minHeight: CGFloat = 150
+        static let maxWidth: CGFloat = 900
+        static let maxHeight: CGFloat = 900
+        static let cornerRadius: CGFloat = 30
+        static let borderWidth: CGFloat = 0.5
+        static let expandedScreenRatio: CGFloat = 0.7
+        static let animationDuration: Double = 0.3
+        static let pollingInterval: TimeInterval = 1.0
+        static let initialPollingDelay: TimeInterval = 3.0
+        static let webViewSearchDelay: TimeInterval = 0.5
+    }
+}
 
-    private static let defaultWidth: CGFloat = 500
-    private static let defaultHeight: CGFloat = 200
+class ChatBarPanel: NSPanel, NSWindowDelegate {
 
     private var initialSize: NSSize {
-        let width = UserDefaults.standard.double(forKey: "panelWidth")
-        let height = UserDefaults.standard.double(forKey: "panelHeight")
+        let width = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelWidth.rawValue)
+        let height = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelHeight.rawValue)
         return NSSize(
-            width: width > 0 ? width : Self.defaultWidth,
-            height: height > 0 ? height : Self.defaultHeight
+            width: width > 0 ? width : Constants.defaultWidth,
+            height: height > 0 ? height : Constants.defaultHeight
         )
     }
 
     // Expanded height: 70% of screen height or initial height, whichever is larger
     private var expandedHeight: CGFloat {
         let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
-        return max(screenHeight * 0.7, initialSize.height)
+        return max(screenHeight * Constants.expandedScreenRatio, initialSize.height)
     }
 
     private var isExpanded = false
@@ -46,10 +61,10 @@ class ChatBar: NSPanel, NSWindowDelegate {
         """
 
     init(contentView: NSView) {
-        let width = UserDefaults.standard.double(forKey: "panelWidth")
-        let height = UserDefaults.standard.double(forKey: "panelHeight")
-        let initWidth = width > 0 ? width : Self.defaultWidth
-        let initHeight = height > 0 ? height : Self.defaultHeight
+        let width = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelWidth.rawValue)
+        let height = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelHeight.rawValue)
+        let initWidth = width > 0 ? width : Constants.defaultWidth
+        let initHeight = height > 0 ? height : Constants.defaultHeight
 
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: initWidth, height: initHeight),
@@ -68,7 +83,7 @@ class ChatBar: NSPanel, NSWindowDelegate {
         configureWindow()
         configureAppearance()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Constants.webViewSearchDelay) { [weak self] in
             guard let self = self, let content = self.contentView else { return }
             self.findWebView(in: content)
             print("[ChatBar] WebView found: \(self.webView != nil)")
@@ -95,8 +110,8 @@ class ChatBar: NSPanel, NSWindowDelegate {
         collectionBehavior.insert(.fullScreenAuxiliary)
         collectionBehavior.insert(.canJoinAllSpaces)
 
-        minSize = NSSize(width: 300, height: 150)
-        maxSize = NSSize(width: 900, height: 900)
+        minSize = NSSize(width: Constants.minWidth, height: Constants.minHeight)
+        maxSize = NSSize(width: Constants.maxWidth, height: Constants.maxHeight)
     }
 
     private func configureAppearance() {
@@ -106,16 +121,16 @@ class ChatBar: NSPanel, NSWindowDelegate {
 
         if let contentView = contentView {
             contentView.wantsLayer = true
-            contentView.layer?.cornerRadius = 30
+            contentView.layer?.cornerRadius = Constants.cornerRadius
             contentView.layer?.masksToBounds = true
-            contentView.layer?.borderWidth = 0.5
+            contentView.layer?.borderWidth = Constants.borderWidth
             contentView.layer?.borderColor = NSColor.separatorColor.cgColor
         }
     }
 
     private func startPolling() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.pollingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Constants.initialPollingDelay) { [weak self] in
+            self?.pollingTimer = Timer.scheduledTimer(withTimeInterval: Constants.pollingInterval, repeats: true) { [weak self] _ in
                 self?.checkForConversation()
             }
         }
@@ -143,7 +158,7 @@ class ChatBar: NSPanel, NSWindowDelegate {
         let currentFrame = self.frame
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.3
+            context.duration = Constants.animationDuration
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
             let newFrame = NSRect(
@@ -205,8 +220,8 @@ class ChatBar: NSPanel, NSWindowDelegate {
         // Only persist size when in initial (non-expanded) state
         guard !isExpanded else { return }
 
-        UserDefaults.standard.set(frame.width, forKey: "panelWidth")
-        UserDefaults.standard.set(frame.height, forKey: "panelHeight")
+        UserDefaults.standard.set(frame.width, forKey: UserDefaultsKeys.panelWidth.rawValue)
+        UserDefaults.standard.set(frame.height, forKey: UserDefaultsKeys.panelHeight.rawValue)
     }
 
     override var canBecomeKey: Bool { true }

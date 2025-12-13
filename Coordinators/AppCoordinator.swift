@@ -14,9 +14,22 @@ extension Notification.Name {
     static let openMainWindow = Notification.Name("openMainWindow")
 }
 
+extension AppCoordinator {
+    struct Constants {
+        static let geminiURL = URL(string: "https://gemini.google.com/app")!
+        static let geminiHost = "gemini.google.com"
+        static let geminiAppPath = "/app"
+        static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        static let defaultPageZoom: Double = 1.0
+        static let dockOffset: CGFloat = 50
+        static let mainWindowIdentifier = "main"
+        static let mainWindowTitle = "Gemini Desktop"
+    }
+}
+
 @Observable
 class AppCoordinator {
-    private var chatBar: ChatBar?
+    private var chatBar: ChatBarPanel?
     private var expandedState = ExpandedState()
     let webView: WKWebView
     var canGoBack: Bool = false
@@ -30,8 +43,6 @@ class AppCoordinator {
         @Published var isExpanded: Bool = false
     }
 
-    private static let geminiURL = URL(string: "https://gemini.google.com/app")!
-
     init() {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
@@ -42,14 +53,14 @@ class AppCoordinator {
         wv.allowsBackForwardNavigationGestures = true
         wv.allowsLinkPreview = true
 
-        // Set custom User-Agent to appear as Safari (fixes Google login blocking WebViews)
-        wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        // Set custom User-Agent to appear as Safari
+        wv.customUserAgent = Constants.userAgent
 
         // Apply saved page zoom
-        let savedZoom = UserDefaults.standard.double(forKey: "pageZoom")
-        wv.pageZoom = savedZoom > 0 ? savedZoom : 1.0
+        let savedZoom = UserDefaults.standard.double(forKey: UserDefaultsKeys.pageZoom.rawValue)
+        wv.pageZoom = savedZoom > 0 ? savedZoom : Constants.defaultPageZoom
 
-        wv.load(URLRequest(url: Self.geminiURL))
+        wv.load(URLRequest(url: Constants.geminiURL))
 
         self.webView = wv
 
@@ -66,7 +77,7 @@ class AppCoordinator {
                 guard let currentURL = webView.url else { return }
 
                 // Check if we're at the Gemini home/app page
-                let isGeminiApp = currentURL.host == "gemini.google.com" && currentURL.path.hasPrefix("/app")
+                let isGeminiApp = currentURL.host == Constants.geminiHost && currentURL.path.hasPrefix(Constants.geminiAppPath)
 
                 if isGeminiApp {
                     self.isAtHome = true
@@ -87,7 +98,7 @@ class AppCoordinator {
     func reloadHomePage() {
         isAtHome = true
         canGoBack = false
-        webView.load(URLRequest(url: Self.geminiURL))
+        webView.load(URLRequest(url: Constants.geminiURL))
     }
 
     func goBack() {
@@ -107,15 +118,15 @@ class AppCoordinator {
             return
         }
 
-        let contentView = ChatBarContent(
-            webView: webView,
+        let contentView = ChatBarView(
             expandedState: expandedState,
+            webView: webView,
             onExpandToMain: { [weak self] in
                 self?.expandToMainWindow()
             }
         )
         let hostingView = NSHostingView(rootView: contentView)
-        let bar = ChatBar(contentView: hostingView)
+        let bar = ChatBarPanel(contentView: hostingView)
         bar.onExpandedChange = { [weak self] expanded in
             self?.expandedState.isExpanded = expanded
         }
@@ -125,7 +136,7 @@ class AppCoordinator {
             let screenRect = screen.visibleFrame
             let barSize = bar.frame.size
             let x = screenRect.origin.x + (screenRect.width - barSize.width) / 2
-            let y = screenRect.origin.y + 50  // 50px above dock
+            let y = screenRect.origin.y + Constants.dockOffset
             bar.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
@@ -141,7 +152,7 @@ class AppCoordinator {
     func closeMainWindow() {
         // Find and hide the main window
         for window in NSApp.windows {
-            if window.identifier?.rawValue == "main" || window.title == "Gemini Desktop" {
+            if window.identifier?.rawValue == Constants.mainWindowIdentifier || window.title == Constants.mainWindowTitle {
                 if !(window is NSPanel) {
                     window.orderOut(nil)
                 }
@@ -167,7 +178,7 @@ class AppCoordinator {
 
         // Find existing main window (may be hidden/suppressed)
         let mainWindow = NSApp.windows.first(where: {
-            $0.identifier?.rawValue == "main" || $0.title == "Gemini Desktop"
+            $0.identifier?.rawValue == Constants.mainWindowIdentifier || $0.title == Constants.mainWindowTitle
         })
 
         if let window = mainWindow {
@@ -179,80 +190,5 @@ class AppCoordinator {
         }
 
         NSApp.activate(ignoringOtherApps: true)
-    }
-}
-
-// MARK: - Chat Bar Content View
-struct ChatBarContent: View {
-    let webView: WKWebView
-    @ObservedObject var expandedState: AppCoordinator.ExpandedState
-    let onExpandToMain: () -> Void
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            GeminiWebView(webView: webView)
-
-            Button(action: onExpandToMain) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 38, height: 38)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .padding(16)
-            .offset(x: -2)
-        }
-    }
-}
-
-// MARK: - Main Window Content View
-struct MainWindowContent: View {
-    @Binding var coordinator: AppCoordinator
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some View {
-        GeminiWebView(webView: coordinator.webView)
-            .onAppear {
-                coordinator.openWindowAction = { id in
-                    openWindow(id: id)
-                }
-            }
-            .toolbar {
-                if coordinator.canGoBack {
-                    ToolbarItem(placement: .navigation) {
-                        Button {
-                            coordinator.goBack()
-                        } label: {
-                            Image(systemName: "chevron.left")
-                        }
-                        .help("Back")
-                    }
-                }
-
-                ToolbarItem(placement: .principal) {
-                    Spacer()
-                }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        minimizeToPrompt()
-                    } label: {
-                        Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    }
-                    .help("Minimize to Prompt Panel")
-                }
-            }
-    }
-
-    private func minimizeToPrompt() {
-        // Close main window and show chat bar
-        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" || $0.title == "Gemini Desktop" }) {
-            if !(window is NSPanel) {
-                window.orderOut(nil)
-            }
-        }
-        coordinator.showChatBar()
     }
 }
