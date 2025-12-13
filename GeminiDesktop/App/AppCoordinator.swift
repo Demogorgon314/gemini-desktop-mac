@@ -164,13 +164,20 @@ class AppCoordinator {
 
     func openMainWindow() {
         NSApp.setActivationPolicy(.regular)
-        if let mainWindow = NSApp.windows.first(where: {
+
+        // Find existing main window (may be hidden/suppressed)
+        let mainWindow = NSApp.windows.first(where: {
             $0.identifier?.rawValue == "main" || $0.title == "Gemini Desktop"
-        }) {
-            mainWindow.makeKeyAndOrderFront(nil)
-        } else {
-            openWindowAction?("main")
+        })
+
+        if let window = mainWindow {
+            // Window exists - show it (works for suppressed windows too)
+            window.makeKeyAndOrderFront(nil)
+        } else if let openWindowAction = openWindowAction {
+            // Window doesn't exist yet - use SwiftUI openWindow to create it
+            openWindowAction("main")
         }
+
         NSApp.activate(ignoringOtherApps: true)
     }
 }
@@ -207,6 +214,11 @@ struct MainWindowContent: View {
 
     var body: some View {
         GeminiWebView(webView: coordinator.webView)
+            .onAppear {
+                coordinator.openWindowAction = { id in
+                    openWindow(id: id)
+                }
+            }
             .toolbar {
                 if coordinator.canGoBack {
                     ToolbarItem(placement: .navigation) {
