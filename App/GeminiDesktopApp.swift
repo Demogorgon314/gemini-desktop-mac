@@ -30,22 +30,11 @@ struct GeminiDesktopApp: App {
         }
         .defaultSize(width: Constants.mainWindowDefaultWidth, height: Constants.mainWindowDefaultHeight)
         .windowToolbarStyle(.unified(showsTitle: false))
-        .commands {
-            CommandGroup(after: .appSettings) {
-                Button("Settings...") {
-                    openSettingsWindow()
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-        }
 
-        Window(Constants.settingsWindowTitle, id: Constants.settingsWindowID) {
-            ScrollView {
-                SettingsView(coordinator: $coordinator)
-            }
-            .frame(minWidth: Constants.settingsWindowMinWidth, minHeight: Constants.settingsWindowMinHeight)
+        Settings {
+            SettingsView(coordinator: $coordinator)
         }
-        .defaultSize(width: Constants.settingsWindowMinWidth, height: Constants.settingsWindowMinHeight)
+        .defaultSize(width: Constants.settingsWindowDefaultWidth, height: Constants.settingsWindowDefaultHeight)
 
         MenuBarExtra {
             MenuBarView(coordinator: $coordinator)
@@ -75,17 +64,6 @@ struct GeminiDesktopApp: App {
             coordinator.toggleChatBar()
         }
     }
-
-    private func openSettingsWindow() {
-        if let settingsWindow = NSApp.windows.first(where: {
-            $0.identifier?.rawValue == GeminiDesktopApp.Constants.settingsWindowID || $0.title == GeminiDesktopApp.Constants.settingsWindowTitle
-        }) {
-            settingsWindow.makeKeyAndOrderFront(nil)
-        } else {
-            openWindow(id: GeminiDesktopApp.Constants.settingsWindowID)
-        }
-        NSApp.activate(ignoringOtherApps: true)
-    }
 }
 
 // MARK: - Constants
@@ -98,13 +76,10 @@ extension GeminiDesktopApp {
         static let mainWindowDefaultHeight: CGFloat = 700
 
         // Settings Window
-        static let settingsWindowMinWidth: CGFloat = 500
-        static let settingsWindowMinHeight: CGFloat = 200
+        static let settingsWindowDefaultWidth: CGFloat = 700
+        static let settingsWindowDefaultHeight: CGFloat = 600
 
-        // Window Identifiers
         static let mainWindowID = "main"
-        static let settingsWindowID = "settings"
-        static let settingsWindowTitle = "Settings"
 
         // Appearance
         static let toolbarColor = (red: 241.0/255.0, green: 244.0/255.0, blue: 248.0/255.0)
