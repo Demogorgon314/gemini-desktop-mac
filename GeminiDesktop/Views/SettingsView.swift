@@ -20,7 +20,7 @@ struct SettingsView: View {
                             try newValue ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
                         } catch { launchAtLogin = !newValue }
                     }
-                Toggle("Show Window at Launch", isOn: $showWindowAtLaunch)
+                Toggle("Show Desktop Window at Launch", isOn: $showWindowAtLaunch)
             }
             Section("Keyboard Shortcuts") {
                 HStack {
