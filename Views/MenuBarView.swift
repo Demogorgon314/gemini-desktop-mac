@@ -14,25 +14,31 @@ struct MenuBarView: View {
 
     var body: some View {
         Group {
-            Button("Open Gemini Desktop") {
+            Button {
                 coordinator.openMainWindow()
+            } label: {
+                Label("Open Gemini Desktop", systemImage: "macwindow")
             }
 
-            Button("Toggle Chat Bar") {
+            Button {
                 coordinator.toggleChatBar()
+            } label: {
+                Label("Toggle Chat Bar", systemImage: "rectangle.bottomhalf.inset.filled")
             }
 
             Divider()
 
-            Button("Settings...") {
-                openSettingsWindow()
+            SettingsLink {
+                Label("Settings...", systemImage: "gearshape")
             }
             .keyboardShortcut(",", modifiers: .command)
 
             Divider()
 
-            Button("Quit") {
+            Button {
                 NSApp.terminate(nil)
+            } label: {
+                Label("Quit", systemImage: "power")
             }
             .keyboardShortcut("q", modifiers: .command)
         }
@@ -41,16 +47,5 @@ struct MenuBarView: View {
                 openWindow(id: id)
             }
         }
-    }
-
-    private func openSettingsWindow() {
-        if let settingsWindow = NSApp.windows.first(where: {
-            $0.identifier?.rawValue == GeminiDesktopApp.Constants.settingsWindowID || $0.title == GeminiDesktopApp.Constants.settingsWindowTitle
-        }) {
-            settingsWindow.makeKeyAndOrderFront(nil)
-        } else {
-            openWindow(id: GeminiDesktopApp.Constants.settingsWindowID)
-        }
-        NSApp.activate(ignoringOtherApps: true)
     }
 }
