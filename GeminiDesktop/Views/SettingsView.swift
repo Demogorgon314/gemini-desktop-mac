@@ -6,7 +6,8 @@ import ServiceManagement
 struct SettingsView: View {
     @Binding var coordinator: AppCoordinator
     @AppStorage("pageZoom") private var pageZoom: Double = 1.0
-    @AppStorage("showWindowAtLaunch") private var showWindowAtLaunch: Bool = true
+    @AppStorage("hideWindowAtLaunch") private var hideWindowAtLaunch: Bool = false
+    
     @State private var showingResetAlert = false
     @State private var isClearing = false
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -20,7 +21,7 @@ struct SettingsView: View {
                             try newValue ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
                         } catch { launchAtLogin = !newValue }
                     }
-                Toggle("Show Desktop Window at Launch", isOn: $showWindowAtLaunch)
+                Toggle("Hide Desktop Window at Launch", isOn: $hideWindowAtLaunch)
             }
             Section("Keyboard Shortcuts") {
                 HStack {

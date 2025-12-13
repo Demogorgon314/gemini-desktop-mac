@@ -20,9 +20,9 @@ extension KeyboardShortcuts.Name {
 struct GeminiDesktopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State var coordinator = AppCoordinator()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        // Main Window
         Window("Gemini Desktop", id: "main") {
             MainWindowContent(coordinator: $coordinator)
                 .toolbarBackground(Color(red: 241/255, green: 244/255, blue: 248/255), for: .windowToolbar)
@@ -30,16 +30,23 @@ struct GeminiDesktopApp: App {
         }
         .defaultSize(width: 1000, height: 700)
         .windowToolbarStyle(.unified(showsTitle: false))
+        .commands {
+            CommandGroup(after: .appSettings) {
+                Button("Settings...") {
+                    openSettingsWindow()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
 
-        // Settings Window
         Window("Settings", id: "settings") {
             ScrollView {
                 SettingsView(coordinator: $coordinator)
             }
+            .frame(minWidth: 500, minHeight: 200)
         }
         .defaultSize(width: 500, height: 200)
 
-        // Menu Bar
         MenuBarExtra {
             MenuBarContentView(coordinator: coordinator)
         } label: {
@@ -49,10 +56,20 @@ struct GeminiDesktopApp: App {
     }
 
     init() {
-        // Setup keyboard shortcut
         KeyboardShortcuts.onKeyDown(for: .bringToFront) { [self] in
             coordinator.toggleChatBar()
         }
+    }
+
+    private func openSettingsWindow() {
+        if let settingsWindow = NSApp.windows.first(where: {
+            $0.identifier?.rawValue == "settings" || $0.title == "Settings"
+        }) {
+            settingsWindow.makeKeyAndOrderFront(nil)
+        } else {
+            openWindow(id: "settings")
+        }
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
@@ -121,15 +138,21 @@ struct MenuBarContentView: View {
 // MARK: - App Delegate
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let showWindowAtLaunch = UserDefaults.standard.object(forKey: "showWindowAtLaunch") as? Bool ?? true
+        let hideWindowAtLaunch = UserDefaults.standard.bool(forKey: "hideWindowAtLaunch")
 
-        if showWindowAtLaunch {
-            // Show dock icon and open main window
-            NSApp.setActivationPolicy(.regular)
-            NotificationCenter.default.post(name: .openMainWindow, object: nil)
-        } else {
-            // Hide dock icon, window is already suppressed
+        if hideWindowAtLaunch {
+            // Hide dock icon and close main window
             NSApp.setActivationPolicy(.accessory)
+            DispatchQueue.main.async {
+                for window in NSApp.windows {
+                    if window.identifier?.rawValue == "main" || window.title == "Gemini Desktop" {
+                        window.close()
+                    }
+                }
+            }
+        } else {
+            // Show dock icon (window auto-launches from SwiftUI)
+            NSApp.setActivationPolicy(.regular)
         }
     }
 
