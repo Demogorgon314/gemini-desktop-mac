@@ -15,27 +15,27 @@ An **unofficial macOS desktop wrapper** for Google Gemini, built as a lightweigh
 
 ## Features
 
-### 悬浮聊天栏
-- **快捷访问面板** - 悬浮窗口，始终置顶于所有应用之上
+### Floating Chat Bar
+- **Quick Access Panel** - A floating window that stays on top of all apps
 
-### 全局快捷键
-- **切换聊天栏** - 在设置中自定义快捷键，随时随地呼出/隐藏聊天栏
-- 可视化快捷键录制器，设置简单直观
+### Global Keyboard Shortcut
+- **Toggle Chat Bar** - Set your own shortcut in Settings to instantly show/hide the chat bar from any app
+- Configurable via visual keyboard recorder in preferences
 
-### 菜单栏应用
-- **常驻菜单栏** - 轻量级菜单栏应用，不占用 Dock 栏空间
-- **快捷菜单** - 一键访问：打开 Gemini、切换聊天栏、设置、退出
-- **开机自启** - 可选随 Mac 启动
+### Menu Bar App
+- **Lives in Menu Bar** - Runs as a lightweight menu bar app (no dock icon clutter)
+- **Quick Menu** - Access Open Gemini, Toggle Chat Bar, Settings, and Quit
+- **Launch at Login** - Optional auto-start with your Mac
 
-### 其他功能
-- 原生 macOS 桌面体验
-- 轻量级 WebView 封装
-- 可调节字体大小 (80%-120%)
-- 支持摄像头和麦克风（用于 Gemini 语音/视频功能）
-- 隐私控制：可清除网站数据
-- 使用官方 Gemini 网页界面
-- 无追踪、无数据收集
-- 开源
+### Other Features
+- Native macOS desktop experience
+- Lightweight WebView wrapper
+- Adjustable text size (80%-120%)
+- Camera & microphone support for Gemini features
+- Privacy controls to reset website data
+- Uses the official Gemini web interface
+- No tracking, no data collection
+- Open source
 
 ---
 
