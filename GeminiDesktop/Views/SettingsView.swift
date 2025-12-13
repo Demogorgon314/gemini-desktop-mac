@@ -1,6 +1,6 @@
 //
 //  SettingsView.swift
-//  GeminiMac
+//  GeminiDesktop
 //
 //  Created by alexcding on 2025-12-13.
 //
@@ -36,7 +36,7 @@ struct SettingsView: View {
             } header: {
                 Text("General")
             } footer: {
-                Text("Automatically start Gemini in the menu bar when you log in")
+                Text("Automatically start Gemini Desktop in the menu bar when you log in")
             }
 
             Section {

@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "74CBD8A92EED8FCB00F226E3"
-               BuildableName = "GeminiMac.app"
-               BlueprintName = "GeminiMac"
-               ReferencedContainer = "container:GeminiMac.xcodeproj">
+               BuildableName = "Gemini Desktop.app"
+               BlueprintName = "GeminiDesktop"
+               ReferencedContainer = "container:GeminiDesktop.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "74CBD8A92EED8FCB00F226E3"
-            BuildableName = "GeminiMac.app"
-            BlueprintName = "GeminiMac"
-            ReferencedContainer = "container:GeminiMac.xcodeproj">
+            BuildableName = "Gemini Desktop.app"
+            BlueprintName = "GeminiDesktop"
+            ReferencedContainer = "container:GeminiDesktop.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "74CBD8A92EED8FCB00F226E3"
-            BuildableName = "GeminiMac.app"
-            BlueprintName = "GeminiMac"
-            ReferencedContainer = "container:GeminiMac.xcodeproj">
+            BuildableName = "Gemini Desktop.app"
+            BlueprintName = "GeminiDesktop"
+            ReferencedContainer = "container:GeminiDesktop.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

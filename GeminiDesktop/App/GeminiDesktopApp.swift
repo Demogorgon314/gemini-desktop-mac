@@ -1,6 +1,6 @@
 //
-//  GeminiMacApp.swift
-//  GeminiMac
+//  GeminiDesktopApp.swift
+//  GeminiDesktop
 //
 //  Created by alexcding on 2025-12-13.
 //
@@ -17,13 +17,13 @@ extension KeyboardShortcuts.Name {
 
 // MARK: - Main App
 @main
-struct GeminiMacApp: App {
+struct GeminiDesktopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State var coordinator = AppCoordinator()
 
     var body: some Scene {
         // Main Window
-        Window("Gemini", id: "main") {
+        Window("Gemini Desktop", id: "main") {
             MainWindowContent(coordinator: coordinator)
                 .toolbarBackground(Color(red: 241/255, green: 244/255, blue: 248/255), for: .windowToolbar)
                 .frame(minWidth: 400, minHeight: 300)
@@ -78,7 +78,7 @@ struct MenuBarContentView: View {
 
     var body: some View {
         Group {
-            Button("Open Gemini Window") {
+            Button("Open Gemini Desktop") {
                 coordinator.openMainWindow()
             }
 

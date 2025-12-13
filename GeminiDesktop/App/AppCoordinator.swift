@@ -1,6 +1,6 @@
 //
 //  AppCoordinator.swift
-//  GeminiMac
+//  GeminiDesktop
 //
 //  Created by alexcding on 2025-12-13.
 //
@@ -141,7 +141,7 @@ class AppCoordinator {
     func closeMainWindow() {
         // Find and hide the main window
         for window in NSApp.windows {
-            if window.identifier?.rawValue == "main" || window.title == "Gemini" {
+            if window.identifier?.rawValue == "main" || window.title == "Gemini Desktop" {
                 if !(window is NSPanel) {
                     window.orderOut(nil)
                 }
@@ -165,7 +165,7 @@ class AppCoordinator {
     func openMainWindow() {
         NSApp.setActivationPolicy(.regular)
         if let mainWindow = NSApp.windows.first(where: {
-            $0.identifier?.rawValue == "main" || $0.title == "Gemini"
+            $0.identifier?.rawValue == "main" || $0.title == "Gemini Desktop"
         }) {
             mainWindow.makeKeyAndOrderFront(nil)
         } else {
@@ -236,7 +236,7 @@ struct MainWindowContent: View {
 
     private func minimizeToPrompt() {
         // Close main window and show chat bar
-        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" || $0.title == "Gemini" }) {
+        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" || $0.title == "Gemini Desktop" }) {
             if !(window is NSPanel) {
                 window.orderOut(nil)
             }
