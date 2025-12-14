@@ -30,6 +30,64 @@ struct GeminiDesktopApp: App {
         }
         .defaultSize(width: Constants.mainWindowDefaultWidth, height: Constants.mainWindowDefaultHeight)
         .windowToolbarStyle(.unified(showsTitle: false))
+        .commands {
+            CommandGroup(after: .toolbar) {
+                Button {
+                    coordinator.goBack()
+                } label: {
+                    Label("Back", systemImage: "chevron.left")
+                }
+                .keyboardShortcut("[", modifiers: .command)
+                .disabled(!coordinator.canGoBack)
+
+                Button {
+                    coordinator.goForward()
+                } label: {
+                    Label("Forward", systemImage: "chevron.right")
+                }
+                .keyboardShortcut("]", modifiers: .command)
+                .disabled(!coordinator.canGoForward)
+
+                Button {
+                    coordinator.goHome()
+                } label: {
+                    Label("Go Home", systemImage: "house")
+                }
+                .keyboardShortcut("h", modifiers: [.command, .shift])
+
+                Divider()
+
+                Button {
+                    coordinator.reload()
+                } label: {
+                    Label("Reload Page", systemImage: "arrow.clockwise")
+                }
+                .keyboardShortcut("r", modifiers: .command)
+
+                Divider()
+
+                Button {
+                    coordinator.zoomIn()
+                } label: {
+                    Label("Zoom In", systemImage: "plus.magnifyingglass")
+                }
+                .keyboardShortcut("+", modifiers: .command)
+
+                Button {
+                    coordinator.zoomOut()
+                } label: {
+                    Label("Zoom Out", systemImage: "minus.magnifyingglass")
+                }
+                .keyboardShortcut("-", modifiers: .command)
+
+                Button {
+                    coordinator.resetZoom()
+                } label: {
+                    Label("Actual Size", systemImage: "1.magnifyingglass")
+                }
+                .keyboardShortcut("0", modifiers: .command)
+            }
+        }
 
         Settings {
             SettingsView(coordinator: $coordinator)

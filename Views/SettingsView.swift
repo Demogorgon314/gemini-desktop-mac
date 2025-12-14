@@ -32,12 +32,14 @@ struct SettingsView: View {
             }
             Section("Appearance") {
                 HStack {
-                    Text("Text Size:")
-                    Slider(value: $pageZoom, in: Constants.minPageZoom...Constants.maxPageZoom, step: Constants.pageZoomStep)
+                    Text("Text Size: \(Int((pageZoom * 100).rounded()))%")
+                    Spacer()
+                    Stepper("",
+                            value: $pageZoom,
+                            in: Constants.minPageZoom...Constants.maxPageZoom,
+                            step: Constants.pageZoomStep)
                         .onChange(of: pageZoom) { coordinator.webView.pageZoom = $1 }
-                    Text("\(Int(pageZoom * 100))%")
-                        .font(.system(.body, design: .monospaced))
-                        .frame(width: 50, alignment: .trailing)
+                        .labelsHidden()
                 }
             }
             Section("Privacy") {
@@ -79,8 +81,8 @@ extension SettingsView {
 
     struct Constants {
         static let defaultPageZoom: Double = 1.0
-        static let minPageZoom: Double = 0.8
-        static let maxPageZoom: Double = 1.2
+        static let minPageZoom: Double = 0.6
+        static let maxPageZoom: Double = 1.4
         static let pageZoomStep: Double = 0.01
     }
 

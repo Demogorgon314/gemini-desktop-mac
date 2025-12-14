@@ -19,7 +19,9 @@ class AppCoordinator {
     private var chatBar: ChatBarPanel?
     let webView: WKWebView
     var canGoBack: Bool = false
+    var canGoForward: Bool = false
     private var backObserver: NSKeyValueObservation?
+    private var forwardObserver: NSKeyValueObservation?
     private var urlObserver: NSKeyValueObservation?
     private var isAtHome: Bool = true
 
@@ -50,6 +52,13 @@ class AppCoordinator {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.canGoBack = !self.isAtHome && webView.canGoBack
+            }
+        }
+
+        forwardObserver = wv.observe(\.canGoForward, options: [.new, .initial]) { [weak self] webView, _ in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.canGoForward = webView.canGoForward
             }
         }
 
@@ -86,6 +95,35 @@ class AppCoordinator {
     func goBack() {
         isAtHome = false
         webView.goBack()
+    }
+
+    func reload() {
+        webView.reload()
+    }
+
+    func goForward() {
+        webView.goForward()
+    }
+
+    func goHome() {
+        reloadHomePage()
+    }
+
+    func zoomIn() {
+        let newZoom = min((webView.pageZoom * 100 + 1).rounded() / 100, 1.4)
+        webView.pageZoom = newZoom
+        UserDefaults.standard.set(newZoom, forKey: UserDefaultsKeys.pageZoom.rawValue)
+    }
+
+    func zoomOut() {
+        let newZoom = max((webView.pageZoom * 100 - 1).rounded() / 100, 0.6)
+        webView.pageZoom = newZoom
+        UserDefaults.standard.set(newZoom, forKey: UserDefaultsKeys.pageZoom.rawValue)
+    }
+
+    func resetZoom() {
+        webView.pageZoom = Constants.defaultPageZoom
+        UserDefaults.standard.set(Constants.defaultPageZoom, forKey: UserDefaultsKeys.pageZoom.rawValue)
     }
 
     func showChatBar() {
