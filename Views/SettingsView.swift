@@ -7,7 +7,8 @@ struct SettingsView: View {
     @Binding var coordinator: AppCoordinator
     @AppStorage(UserDefaultsKeys.pageZoom.rawValue) private var pageZoom: Double = Constants.defaultPageZoom
     @AppStorage(UserDefaultsKeys.hideWindowAtLaunch.rawValue) private var hideWindowAtLaunch: Bool = false
-    
+    @AppStorage(UserDefaultsKeys.hideDockIcon.rawValue) private var hideDockIcon: Bool = false
+
     @State private var showingResetAlert = false
     @State private var isClearing = false
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -22,6 +23,10 @@ struct SettingsView: View {
                         } catch { launchAtLogin = !newValue }
                     }
                 Toggle("Hide Desktop Window at Launch", isOn: $hideWindowAtLaunch)
+                Toggle("Hide Dock Icon", isOn: $hideDockIcon)
+                    .onChange(of: hideDockIcon) { _, newValue in
+                        NSApp.setActivationPolicy(newValue ? .accessory : .regular)
+                    }
             }
             Section("Keyboard Shortcuts") {
                 HStack {

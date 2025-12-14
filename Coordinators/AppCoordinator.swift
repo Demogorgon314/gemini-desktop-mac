@@ -193,7 +193,10 @@ class AppCoordinator {
         // Hide chat bar first - WebView can only be in one view hierarchy
         hideChatBar()
 
-        NSApp.setActivationPolicy(.regular)
+        let hideDockIcon = UserDefaults.standard.bool(forKey: UserDefaultsKeys.hideDockIcon.rawValue)
+        if !hideDockIcon {
+            NSApp.setActivationPolicy(.regular)
+        }
 
         // Find existing main window (may be hidden/suppressed)
         let mainWindow = NSApp.windows.first(where: {
