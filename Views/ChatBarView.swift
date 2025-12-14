@@ -9,8 +9,6 @@ import SwiftUI
 import WebKit
 
 struct ChatBarView: View {
-    @ObservedObject var expandedState: AppCoordinator.ExpandedState
-
     let webView: WKWebView
     let onExpandToMain: () -> Void
 

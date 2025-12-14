@@ -17,7 +17,6 @@ extension Notification.Name {
 @Observable
 class AppCoordinator {
     private var chatBar: ChatBarPanel?
-    private var expandedState = ExpandedState()
     let webView: WKWebView
     var canGoBack: Bool = false
     private var backObserver: NSKeyValueObservation?
@@ -25,10 +24,6 @@ class AppCoordinator {
     private var isAtHome: Bool = true
 
     var openWindowAction: ((String) -> Void)?
-
-    class ExpandedState: ObservableObject {
-        @Published var isExpanded: Bool = false
-    }
 
     init() {
         let configuration = WKWebViewConfiguration()
@@ -106,7 +101,6 @@ class AppCoordinator {
         }
 
         let contentView = ChatBarView(
-            expandedState: expandedState,
             webView: webView,
             onExpandToMain: { [weak self] in
                 self?.expandToMainWindow()
@@ -114,9 +108,6 @@ class AppCoordinator {
         )
         let hostingView = NSHostingView(rootView: contentView)
         let bar = ChatBarPanel(contentView: hostingView)
-        bar.onExpandedChange = { [weak self] expanded in
-            self?.expandedState.isExpanded = expanded
-        }
 
         // Position at bottom center, above the dock
         if let screen = NSScreen.main {
