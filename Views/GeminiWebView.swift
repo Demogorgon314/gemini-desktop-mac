@@ -22,13 +22,65 @@ struct GeminiWebView: NSViewRepresentable {
         Coordinator()
     }
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+        private var downloadDestination: URL?
 
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
             if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
                 webView.load(URLRequest(url: url))
             }
             return nil
+        }
+
+        func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+            if navigationResponse.canShowMIMEType {
+                decisionHandler(.allow)
+            } else {
+                decisionHandler(.download)
+            }
+        }
+
+        func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+            download.delegate = self
+        }
+
+        func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+            download.delegate = self
+        }
+
+        func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+            let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+            var destination = downloadsURL.appendingPathComponent(suggestedFilename)
+
+            // Handle duplicate filenames
+            var counter = 1
+            let fileManager = FileManager.default
+            let nameWithoutExtension = destination.deletingPathExtension().lastPathComponent
+            let fileExtension = destination.pathExtension
+
+            while fileManager.fileExists(atPath: destination.path) {
+                let newName = fileExtension.isEmpty
+                    ? "\(nameWithoutExtension) (\(counter))"
+                    : "\(nameWithoutExtension) (\(counter)).\(fileExtension)"
+                destination = downloadsURL.appendingPathComponent(newName)
+                counter += 1
+            }
+
+            downloadDestination = destination
+            completionHandler(destination)
+        }
+
+        func downloadDidFinish(_ download: WKDownload) {
+            guard let destination = downloadDestination else { return }
+            NSWorkspace.shared.activateFileViewerSelecting([destination])
+        }
+
+        func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+            let alert = NSAlert()
+            alert.messageText = "Download Failed"
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
 
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
@@ -62,6 +114,16 @@ struct GeminiWebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
             decisionHandler(origin.host.contains(GeminiWebView.Constants.trustedHost) ? .grant : .prompt)
+        }
+
+        func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
+            let panel = NSOpenPanel()
+            panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+            panel.canChooseDirectories = parameters.allowsDirectories
+            panel.canChooseFiles = true
+            panel.begin { response in
+                completionHandler(response == .OK ? panel.urls : nil)
+            }
         }
     }
 }
