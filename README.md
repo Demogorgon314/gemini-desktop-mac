@@ -22,17 +22,11 @@ An **unofficial macOS desktop wrapper** for Google Gemini, built as a lightweigh
 - **Toggle Chat Bar** - Set your own shortcut in Settings to instantly show/hide the chat bar from any app
 - Configurable via visual keyboard recorder in preferences
 
-### Menu Bar App
-- **Lives in Menu Bar** - Runs as a lightweight menu bar app (no dock icon clutter)
-- **Quick Menu** - Access Open Gemini, Toggle Chat Bar, Settings, and Quit
-- **Launch at Login** - Optional auto-start with your Mac
-
 ### Other Features
 - Native macOS desktop experience
 - Lightweight WebView wrapper
 - Adjustable text size (80%-120%)
 - Camera & microphone support for Gemini features
-- Privacy controls to reset website data
 - Uses the official Gemini web interface
 - No tracking, no data collection
 - Open source

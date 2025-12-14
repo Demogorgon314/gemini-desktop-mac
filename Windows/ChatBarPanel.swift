@@ -29,7 +29,6 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
     private var isExpanded = false
     private var pollingTimer: Timer?
     private weak var webView: WKWebView?
-    var onExpandedChange: ((Bool) -> Void)?
 
     // Returns true if in a conversation (not on start page)
     private let checkConversationScript = """
@@ -135,7 +134,6 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
         guard !isExpanded else { return }
         isExpanded = true
         pollingTimer?.invalidate()
-        onExpandedChange?(true)
 
         let currentFrame = self.frame
 
@@ -156,7 +154,6 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
     func resetToInitialSize() {
         isExpanded = false
         pollingTimer?.invalidate()
-        onExpandedChange?(false)
 
         let currentFrame = frame
 
