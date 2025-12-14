@@ -25,7 +25,7 @@ struct GeminiDesktopApp: App {
     var body: some Scene {
         Window(AppCoordinator.Constants.mainWindowTitle, id: Constants.mainWindowID) {
             MainWindowView(coordinator: $coordinator)
-                .toolbarBackground(Color(red: Constants.toolbarColor.red, green: Constants.toolbarColor.green, blue: Constants.toolbarColor.blue), for: .windowToolbar)
+                .toolbarBackground(Color(nsColor: Constants.toolbarColor), for: .windowToolbar)
                 .frame(minWidth: Constants.mainWindowMinWidth, minHeight: Constants.mainWindowMinHeight)
         }
         .defaultSize(width: Constants.mainWindowDefaultWidth, height: Constants.mainWindowDefaultHeight)
@@ -100,12 +100,16 @@ struct GeminiDesktopApp: App {
             Image(systemName: Constants.menuBarIcon)
                 .onAppear {
                     let hideWindowAtLaunch = UserDefaults.standard.bool(forKey: UserDefaultsKeys.hideWindowAtLaunch.rawValue)
-                    if hideWindowAtLaunch {
+                    let hideDockIcon = UserDefaults.standard.bool(forKey: UserDefaultsKeys.hideDockIcon.rawValue)
+
+                    if hideDockIcon || hideWindowAtLaunch {
                         NSApp.setActivationPolicy(.accessory)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + Constants.hideWindowDelay) {
-                            for window in NSApp.windows {
-                                if window.identifier?.rawValue == Constants.mainWindowID || window.title == AppCoordinator.Constants.mainWindowTitle {
-                                    window.orderOut(nil)
+                        if hideWindowAtLaunch {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + Constants.hideWindowDelay) {
+                                for window in NSApp.windows {
+                                    if window.identifier?.rawValue == Constants.mainWindowID || window.title == AppCoordinator.Constants.mainWindowTitle {
+                                        window.orderOut(nil)
+                                    }
                                 }
                             }
                         }
@@ -140,7 +144,13 @@ extension GeminiDesktopApp {
         static let mainWindowID = "main"
 
         // Appearance
-        static let toolbarColor = (red: 241.0/255.0, green: 244.0/255.0, blue: 248.0/255.0)
+        static let toolbarColor: NSColor = NSColor(name: nil) { appearance in
+            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+                return NSColor(red: 43.0/255.0, green: 43.0/255.0, blue: 43.0/255.0, alpha: 1.0)
+            } else {
+                return NSColor(red: 238.0/255.0, green: 241.0/255.0, blue: 247.0/255.0, alpha: 1.0)
+            }
+        }
         static let menuBarIcon = "sparkle"
 
         // Timing

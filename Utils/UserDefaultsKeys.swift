@@ -12,4 +12,5 @@ enum UserDefaultsKeys: String {
     case panelHeight
     case pageZoom
     case hideWindowAtLaunch
+    case hideDockIcon
 }
