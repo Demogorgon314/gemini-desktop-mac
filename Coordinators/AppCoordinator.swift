@@ -131,7 +131,8 @@ class AppCoordinator {
         closeMainWindow()
 
         if let bar = chatBar {
-            // Reuse existing chat bar
+            // Reuse existing chat bar - reposition to current mouse screen
+            repositionChatBarToMouseScreen(bar)
             bar.orderFront(nil)
             bar.makeKeyAndOrderFront(nil)
             bar.checkAndAdjustSize()
@@ -147,8 +148,8 @@ class AppCoordinator {
         let hostingView = NSHostingView(rootView: contentView)
         let bar = ChatBarPanel(contentView: hostingView)
 
-        // Position at bottom center, above the dock
-        if let screen = NSScreen.main {
+        // Position at bottom center of the screen where mouse is located
+        if let screen = screenAtMouseLocation() {
             let screenRect = screen.visibleFrame
             let barSize = bar.frame.size
             let x = screenRect.origin.x + (screenRect.width - barSize.width) / 2
@@ -159,6 +160,24 @@ class AppCoordinator {
         bar.orderFront(nil)
         bar.makeKeyAndOrderFront(nil)
         chatBar = bar
+    }
+
+    /// Returns the screen containing the current mouse cursor location
+    private func screenAtMouseLocation() -> NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        return NSScreen.screens.first { screen in
+            screen.frame.contains(mouseLocation)
+        } ?? NSScreen.main
+    }
+
+    /// Repositions an existing chat bar to the screen containing the mouse cursor
+    private func repositionChatBarToMouseScreen(_ bar: ChatBarPanel) {
+        guard let screen = screenAtMouseLocation() else { return }
+        let screenRect = screen.visibleFrame
+        let barSize = bar.frame.size
+        let x = screenRect.origin.x + (screenRect.width - barSize.width) / 2
+        let y = screenRect.origin.y + Constants.dockOffset
+        bar.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
     func hideChatBar() {

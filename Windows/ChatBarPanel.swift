@@ -20,9 +20,17 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
         )
     }
 
+    /// Returns the screen where this panel is currently located
+    private var currentScreen: NSScreen? {
+        let panelCenter = NSPoint(x: frame.midX, y: frame.midY)
+        return NSScreen.screens.first { screen in
+            screen.frame.contains(panelCenter)
+        } ?? NSScreen.main
+    }
+
     // Expanded height: 70% of screen height or initial height, whichever is larger
     private var expandedHeight: CGFloat {
-        let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
+        let screenHeight = currentScreen?.visibleFrame.height ?? 800
         return max(screenHeight * Constants.expandedScreenRatio, initialSize.height)
     }
 
@@ -138,7 +146,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
         let currentFrame = self.frame
 
         // Calculate the maximum available height from the current position to the top of the screen
-        guard let screen = NSScreen.main else { return }
+        guard let screen = currentScreen else { return }
         let visibleFrame = screen.visibleFrame
         let maxAvailableHeight = visibleFrame.maxY - currentFrame.origin.y
         
