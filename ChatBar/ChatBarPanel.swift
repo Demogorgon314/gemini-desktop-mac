@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 import WebKit
 
-class ChatBarPanel: NSPanel, NSWindowDelegate {
+class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
 
     private var initialSize: NSSize {
         let width = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelWidth.rawValue)
@@ -84,6 +84,141 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
         })();
         """
 
+    // JavaScript to observe input field height changes - with persistent monitoring
+    private let observeInputHeightScript = """
+        (function() {
+            // Prevent multiple initializations of the body observer
+            if (window.__chatBarBodyObserverInitialized) {
+                // Just try to setup observer for current input if not already done
+                setupInputObserver();
+                return getCurrentInputHeight();
+            }
+            window.__chatBarBodyObserverInitialized = true;
+
+            let currentResizeObserver = null;
+            let currentMutationObserver = null;
+            let lastHeight = 0;
+
+            // Function to notify native code of height change
+            function notifyHeightChange(height) {
+                if (Math.abs(height - lastHeight) > 2) {
+                    lastHeight = height;
+                    console.log('[ChatBar] Input height changed:', height);
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.inputHeightChanged) {
+                        window.webkit.messageHandlers.inputHeightChanged.postMessage({ height: height });
+                    }
+                }
+            }
+
+            // Get current input height
+            function getCurrentInputHeight() {
+                const inputInner = document.querySelector('.text-input-field_textarea-inner');
+                return inputInner ? inputInner.getBoundingClientRect().height : null;
+            }
+
+            // Setup observer for a specific input element
+            function setupInputObserver() {
+                const inputInner = document.querySelector('.text-input-field_textarea-inner');
+                
+                if (!inputInner) {
+                    console.log('[ChatBar] Input inner not found, will retry...');
+                    return null;
+                }
+
+                // Check if this specific element already has an observer
+                if (inputInner.dataset.hasHeightObserver === 'true') {
+                    return inputInner.getBoundingClientRect().height;
+                }
+
+                console.log('[ChatBar] Setting up observer for input element');
+                inputInner.dataset.hasHeightObserver = 'true';
+
+                // Clean up old observers if they exist
+                if (currentResizeObserver) {
+                    currentResizeObserver.disconnect();
+                }
+                if (currentMutationObserver) {
+                    currentMutationObserver.disconnect();
+                }
+
+                // Store initial height
+                lastHeight = inputInner.getBoundingClientRect().height;
+                console.log('[ChatBar] Initial input height:', lastHeight);
+
+                // Create a ResizeObserver to watch for size changes
+                currentResizeObserver = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        notifyHeightChange(entry.contentRect.height);
+                    }
+                });
+
+                currentResizeObserver.observe(inputInner);
+
+                // Also use MutationObserver to watch for style attribute changes
+                currentMutationObserver = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            const height = inputInner.getBoundingClientRect().height;
+                            notifyHeightChange(height);
+                        }
+                    }
+                });
+
+                currentMutationObserver.observe(inputInner, {
+                    attributes: true,
+                    attributeFilter: ['style']
+                });
+
+                // Also observe the ql-editor for content changes
+                const qlEditor = inputInner.querySelector('.ql-editor') || document.querySelector('.ql-editor');
+                if (qlEditor && !qlEditor.dataset.hasInputListener) {
+                    qlEditor.dataset.hasInputListener = 'true';
+                    currentResizeObserver.observe(qlEditor);
+
+                    // Watch for input events on the editor
+                    qlEditor.addEventListener('input', () => {
+                        setTimeout(() => {
+                            const height = inputInner.getBoundingClientRect().height;
+                            notifyHeightChange(height);
+                        }, 10);
+                    });
+                }
+
+                return lastHeight;
+            }
+
+            // Use MutationObserver on document body to detect when input field is added/replaced
+            // This handles SPA navigation where the DOM is dynamically rebuilt
+            const bodyObserver = new MutationObserver((mutations) => {
+                const inputInner = document.querySelector('.text-input-field_textarea-inner');
+                if (inputInner && inputInner.dataset.hasHeightObserver !== 'true') {
+                    console.log('[ChatBar] Detected new input element, setting up observer');
+                    setupInputObserver();
+                }
+            });
+
+            bodyObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            // Also set up a periodic check as a fallback (every 2 seconds)
+            setInterval(() => {
+                const inputInner = document.querySelector('.text-input-field_textarea-inner');
+                if (inputInner && inputInner.dataset.hasHeightObserver !== 'true') {
+                    console.log('[ChatBar] Periodic check: setting up observer for input');
+                    setupInputObserver();
+                }
+            }, 2000);
+
+            // Initial setup
+            return setupInputObserver();
+        })();
+        """
+
+    private var inputHeightObserverSetup = false
+    private var baseInputHeight: CGFloat = 0
+
     init(contentView: NSView) {
         let width = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelWidth.rawValue)
         let height = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelHeight.rawValue)
@@ -118,10 +253,93 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
     private func findWebView(in view: NSView) {
         if let wk = view as? WKWebView {
             self.webView = wk
+            setupInputHeightObserver()
             return
         }
         for subview in view.subviews {
             findWebView(in: subview)
+        }
+    }
+
+    /// Setup the message handler to receive input height changes from JavaScript
+    private func setupInputHeightObserver() {
+        guard let webView = webView, !inputHeightObserverSetup else { return }
+        inputHeightObserverSetup = true
+
+        // Add message handler for input height changes
+        webView.configuration.userContentController.add(self, name: "inputHeightChanged")
+
+        // Delay slightly to ensure page is loaded
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.initializeInputHeightObserver()
+        }
+    }
+
+    /// Initialize the JavaScript observer for input height
+    private func initializeInputHeightObserver() {
+        guard let webView = webView else { return }
+
+        webView.evaluateJavaScript(observeInputHeightScript) { [weak self] result, error in
+            if let height = result as? CGFloat, height > 0 {
+                self?.baseInputHeight = height
+                print("[ChatBar] Base input height: \(height)")
+            }
+        }
+    }
+
+    // MARK: - WKScriptMessageHandler
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "inputHeightChanged",
+              let body = message.body as? [String: Any],
+              let height = body["height"] as? CGFloat else { return }
+
+        adjustHeightForInput(newInputHeight: height)
+    }
+
+    /// Adjust panel height based on input field height changes
+    private func adjustHeightForInput(newInputHeight: CGFloat) {
+        // Only adjust when not expanded (on start page)
+        guard !isExpanded else { return }
+
+        // If base height is not set yet, set it now and don't adjust
+        if baseInputHeight <= 0 {
+            baseInputHeight = newInputHeight
+            print("[ChatBar] Set base input height: \(baseInputHeight)")
+            return
+        }
+
+        // Calculate height difference from base (can be negative for shrinking)
+        let heightDiff = newInputHeight - baseInputHeight
+
+        // Calculate new panel height using default height as baseline (not user-saved size)
+        // This ensures consistent behavior regardless of user's saved panel size
+        let newPanelHeight = max(
+            Constants.defaultHeight,
+            min(Constants.defaultHeight + heightDiff, Constants.maxInputExpandHeight)
+        )
+
+        // Don't resize if panel height change is negligible
+        guard abs(frame.height - newPanelHeight) > 2 else { return }
+
+        print("[ChatBar] Adjusting height: base=\(baseInputHeight), new=\(newInputHeight), diff=\(heightDiff), panelHeight=\(newPanelHeight)")
+
+        let currentFrame = frame
+
+        // Keep the bottom of the panel fixed, expand upward
+        // In macOS coordinates, origin is bottom-left, so we keep origin.y the same
+        let newFrame = NSRect(
+            x: currentFrame.origin.x,
+            y: currentFrame.origin.y,  // Keep bottom position fixed
+            width: currentFrame.width,
+            height: newPanelHeight
+        )
+
+        // Animate the resize
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.1
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.animator().setFrame(newFrame, display: true)
         }
     }
 
@@ -267,6 +485,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
 
     deinit {
         pollingTimer?.invalidate()
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "inputHeightChanged")
         if let monitor = clickOutsideMonitor {
             NSEvent.removeMonitor(monitor)
         }
@@ -350,6 +569,7 @@ extension ChatBarPanel {
         static let initialPollingDelay: TimeInterval = 3.0
         static let webViewSearchDelay: TimeInterval = 0.5
         static let topPadding: CGFloat = 20 // Padding from the top of the screen
+        static let maxInputExpandHeight: CGFloat = 400 // Maximum height when input expands
 
     }
 }
