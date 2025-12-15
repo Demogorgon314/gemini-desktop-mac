@@ -131,6 +131,19 @@ class AppCoordinator {
         }
     }
 
+    func toggleMainWindow() {
+        // Check if main window exists and is visible
+        let mainWindow = NSApp.windows.first(where: {
+            $0.identifier?.rawValue == Constants.mainWindowIdentifier || $0.title == Constants.mainWindowTitle
+        })
+        
+        if let window = mainWindow, window.isVisible && window.isKeyWindow {
+            closeMainWindow()
+        } else {
+            openMainWindow()
+        }
+    }
+
     func expandToMainWindow() {
         // Capture the screen where the chat bar is located before hiding it
         let targetScreen = chatBar.flatMap { bar -> NSScreen? in
