@@ -15,6 +15,8 @@ extension Notification.Name {
 
 @Observable
 class AppCoordinator {
+    static let shared = AppCoordinator()
+    
     private var chatBar: ChatBarPanel?
     var webViewModel = WebViewModel()
 
