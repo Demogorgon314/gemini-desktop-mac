@@ -8,20 +8,13 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate {
     static var shared: AppDelegate?
     var menuBarController: MenuBarController?
-    var sharedCoordinator: AppCoordinator?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
         
-        // Create and store coordinator
-        if sharedCoordinator == nil {
-            sharedCoordinator = AppCoordinator()
-        }
-        
-        // Create menu bar controller
-        if let coordinator = sharedCoordinator {
-            menuBarController = MenuBarController(coordinator: coordinator)
-        }
+        // Use singleton coordinator
+        let coordinator = AppCoordinator.shared
+        menuBarController = MenuBarController(coordinator: coordinator)
         
         // Apply launch settings
         applyLaunchSettings()

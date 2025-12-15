@@ -16,6 +16,8 @@ extension Notification.Name {
 
 @Observable
 class AppCoordinator {
+    static let shared = AppCoordinator()
+    
     private var chatBar: ChatBarPanel?
     let webView: WKWebView
     var canGoBack: Bool = false

@@ -21,13 +21,10 @@ struct GeminiDesktopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openWindow) private var openWindow
 
-    var coordinator: AppCoordinator {
-        appDelegate.sharedCoordinator ?? AppCoordinator()
-    }
-
     var body: some Scene {
         Window(AppCoordinator.Constants.mainWindowTitle, id: Constants.mainWindowID) {
-            MainWindowView(coordinator: .constant(coordinator))
+            // Use singleton pattern to ensure we share the same coordinator/webview
+            MainWindowView(coordinator: .constant(AppCoordinator.shared))
                 .toolbarBackground(Color(nsColor: Constants.toolbarColor), for: .windowToolbar)
                 .frame(minWidth: Constants.mainWindowMinWidth, minHeight: Constants.mainWindowMinHeight)
         }
@@ -36,23 +33,23 @@ struct GeminiDesktopApp: App {
         .commands {
             CommandGroup(after: .toolbar) {
                 Button {
-                    coordinator.goBack()
+                    AppCoordinator.shared.goBack()
                 } label: {
                     Label("Back", systemImage: "chevron.left")
                 }
                 .keyboardShortcut("[", modifiers: .command)
-                .disabled(!coordinator.canGoBack)
+                .disabled(!AppCoordinator.shared.canGoBack)
 
                 Button {
-                    coordinator.goForward()
+                    AppCoordinator.shared.goForward()
                 } label: {
                     Label("Forward", systemImage: "chevron.right")
                 }
                 .keyboardShortcut("]", modifiers: .command)
-                .disabled(!coordinator.canGoForward)
+                .disabled(!AppCoordinator.shared.canGoForward)
 
                 Button {
-                    coordinator.goHome()
+                    AppCoordinator.shared.goHome()
                 } label: {
                     Label("Go Home", systemImage: "house")
                 }
@@ -61,7 +58,7 @@ struct GeminiDesktopApp: App {
                 Divider()
 
                 Button {
-                    coordinator.reload()
+                    AppCoordinator.shared.reload()
                 } label: {
                     Label("Reload Page", systemImage: "arrow.clockwise")
                 }
@@ -70,21 +67,21 @@ struct GeminiDesktopApp: App {
                 Divider()
 
                 Button {
-                    coordinator.zoomIn()
+                    AppCoordinator.shared.zoomIn()
                 } label: {
                     Label("Zoom In", systemImage: "plus.magnifyingglass")
                 }
                 .keyboardShortcut("+", modifiers: .command)
 
                 Button {
-                    coordinator.zoomOut()
+                    AppCoordinator.shared.zoomOut()
                 } label: {
                     Label("Zoom Out", systemImage: "minus.magnifyingglass")
                 }
                 .keyboardShortcut("-", modifiers: .command)
 
                 Button {
-                    coordinator.resetZoom()
+                    AppCoordinator.shared.resetZoom()
                 } label: {
                     Label("Actual Size", systemImage: "1.magnifyingglass")
                 }
@@ -93,7 +90,7 @@ struct GeminiDesktopApp: App {
         }
 
         Settings {
-            SettingsView(coordinator: .constant(coordinator))
+            SettingsView(coordinator: .constant(AppCoordinator.shared))
         }
         .defaultSize(width: Constants.settingsWindowDefaultWidth, height: Constants.settingsWindowDefaultHeight)
     }
@@ -101,7 +98,7 @@ struct GeminiDesktopApp: App {
     init() {
         // Register keyboard shortcut
         KeyboardShortcuts.onKeyDown(for: .bringToFront) {
-            AppDelegate.shared?.sharedCoordinator?.toggleChatBar()
+            AppCoordinator.shared.toggleChatBar()
         }
     }
 }
