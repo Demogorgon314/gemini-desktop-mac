@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.hideWindowAtLaunch.rawValue) private var hideWindowAtLaunch: Bool = false
     @AppStorage(UserDefaultsKeys.hideDockIcon.rawValue) private var hideDockIcon: Bool = false
     @AppStorage(UserDefaultsKeys.resetChatBarPosition.rawValue) private var resetChatBarPosition: Bool = true
+    @AppStorage(UserDefaultsKeys.leftClickAction.rawValue) private var leftClickAction: String = "chatBar"
 
     @State private var showingResetAlert = false
     @State private var isClearing = false
@@ -30,6 +31,11 @@ struct SettingsView: View {
                     }
             }
             Section("Chat Bar") {
+                Picker("Left-Click Action:", selection: $leftClickAction) {
+                    Text("Open ChatBar").tag("chatBar")
+                    Text("Open Main Window").tag("mainWindow")
+                }
+                .pickerStyle(.menu)
                 Toggle("Reset Position When Shown", isOn: $resetChatBarPosition)
             }
             Section("Keyboard Shortcuts") {

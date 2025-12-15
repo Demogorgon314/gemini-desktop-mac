@@ -14,4 +14,5 @@ enum UserDefaultsKeys: String {
     case hideWindowAtLaunch
     case hideDockIcon
     case resetChatBarPosition
+    case leftClickAction  // "chatBar" or "mainWindow"
 }
