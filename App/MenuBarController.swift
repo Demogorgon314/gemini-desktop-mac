@@ -14,17 +14,11 @@ import AppKit
 class MenuBarController: NSObject {
     private var statusItem: NSStatusItem?
     private var coordinator: AppCoordinator
-    private var openWindowAction: ((String) -> Void)?
     
     init(coordinator: AppCoordinator) {
         self.coordinator = coordinator
         super.init()
         setupStatusItem()
-    }
-    
-    func setOpenWindowAction(_ action: @escaping (String) -> Void) {
-        self.openWindowAction = action
-        coordinator.openWindowAction = action
     }
     
     private func setupStatusItem() {
@@ -98,11 +92,35 @@ class MenuBarController: NSObject {
     }
     
     @objc private func openSettings() {
-        if let action = openWindowAction {
-            action("settings")
+        // Try multiple approaches to open settings
+        
+        // Approach 1: Standard macOS settings selector
+        if NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) {
+            return
         }
-        // Fallback: try to open settings via NSApp
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        
+        // Approach 2: Legacy preferences selector
+        if NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil) {
+            return
+        }
+        
+        // Approach 3: Simulate Cmd+, keyboard shortcut
+        let event = NSEvent.keyEvent(
+            with: .keyDown,
+            location: NSPoint.zero,
+            modifierFlags: .command,
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: 0,
+            context: nil,
+            characters: ",",
+            charactersIgnoringModifiers: ",",
+            isARepeat: false,
+            keyCode: 43
+        )
+        
+        if let event = event {
+            NSApp.postEvent(event, atStart: true)
+        }
     }
     
     @objc private func quitApp() {

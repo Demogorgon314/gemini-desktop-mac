@@ -54,20 +54,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
     
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Don't terminate if menu bar controller exists (app should keep running in background)
-        if menuBarController != nil {
-            // Hide all windows instead of terminating
-            for window in NSApp.windows {
-                window.orderOut(nil)
-            }
-            return .terminateCancel
-        }
-        return .terminateNow
-    }
-    
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // Don't auto-terminate - app should run in menu bar
+        // Don't auto-terminate when last window closes - app should run in menu bar
         return false
     }
 }
