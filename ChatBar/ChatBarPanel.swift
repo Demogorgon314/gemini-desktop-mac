@@ -291,6 +291,45 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+    
+    // MARK: - Screen Boundary Handling
+    
+    /// Constrain the window to stay within the current screen bounds
+    func constrainToScreen() {
+        guard let screen = currentScreen else { return }
+        let screenFrame = screen.visibleFrame
+        var newFrame = self.frame
+        
+        // Ensure the window doesn't exceed screen height
+        if newFrame.height > screenFrame.height {
+            newFrame.size.height = screenFrame.height
+        }
+        
+        // Ensure the window doesn't go above the screen top
+        if newFrame.maxY > screenFrame.maxY {
+            newFrame.origin.y = screenFrame.maxY - newFrame.height
+        }
+        
+        // Ensure the window doesn't go below the screen bottom
+        if newFrame.origin.y < screenFrame.origin.y {
+            newFrame.origin.y = screenFrame.origin.y
+        }
+        
+        // Ensure the window doesn't go beyond the left edge
+        if newFrame.origin.x < screenFrame.origin.x {
+            newFrame.origin.x = screenFrame.origin.x
+        }
+        
+        // Ensure the window doesn't go beyond the right edge
+        if newFrame.maxX > screenFrame.maxX {
+            newFrame.origin.x = screenFrame.maxX - newFrame.width
+        }
+        
+        // Apply the constrained frame if it changed
+        if newFrame != self.frame {
+            setFrame(newFrame, display: true)
+        }
+    }
 }
 
 
