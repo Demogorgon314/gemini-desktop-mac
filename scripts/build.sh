@@ -11,7 +11,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 # Default values
 CONFIGURATION="Release"
 SIGN_APP=false
-ARCH="x86_64" # Default arch, will change logic below
+ARCH="arm64" # Default arch, will change logic below
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
