@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x86_64, arm64, universal]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Setting version to $VERSION"
+          xcrun agvtool new-marketing-version "$VERSION"
+          xcrun agvtool new-version -all "$VERSION"
+
+      - name: Build App
+        run: ./scripts/build.sh --release --arch ${{ matrix.arch }}
+
+      - name: Create DMG
+        run: |
+          # The build script outputs the location, we know it from convention
+          APP_PATH="build/Build/Products/Release/Gemini Desktop.app"
+          OUTPUT_DIR="build/artifacts/${{ matrix.arch }}"
+          ./scripts/create-dmg.sh "$APP_PATH" "$OUTPUT_DIR"
+
+      - name: Rename DMG
+        run: |
+          cd "build/artifacts/${{ matrix.arch }}"
+          mv "GeminiDesktop.dmg" "GeminiDesktop-${{ matrix.arch }}.dmg"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeminiDesktop-${{ matrix.arch }}
+          path: build/artifacts/${{ matrix.arch }}/GeminiDesktop-${{ matrix.arch }}.dmg
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/GeminiDesktop-x86_64/GeminiDesktop-x86_64.dmg
+            artifacts/GeminiDesktop-arm64/GeminiDesktop-arm64.dmg
+            artifacts/GeminiDesktop-universal/GeminiDesktop-universal.dmg
+          generate_release_notes: true
