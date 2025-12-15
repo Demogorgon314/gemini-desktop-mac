@@ -24,7 +24,7 @@ jobs:
         run: |
           # List available Xcode versions and select the latest
           ls -la /Applications/ | grep Xcode
-          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -version
 
       - name: Set Version
