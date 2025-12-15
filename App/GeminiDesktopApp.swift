@@ -12,7 +12,7 @@ import Combine
 
 // MARK: - Keyboard Shortcut Definition
 extension KeyboardShortcuts.Name {
-    static let bringToFront = Self("bringToFront", default: nil)
+    static let bringToFront = Self("bringToFront", default: .init(.space, modifiers: .option))
 }
 
 // MARK: - Main App
