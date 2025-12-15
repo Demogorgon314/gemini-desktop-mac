@@ -19,12 +19,15 @@ extension KeyboardShortcuts.Name {
 @main
 struct GeminiDesktopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State var coordinator = AppCoordinator()
     @Environment(\.openWindow) private var openWindow
+
+    var coordinator: AppCoordinator {
+        appDelegate.sharedCoordinator ?? AppCoordinator()
+    }
 
     var body: some Scene {
         Window(AppCoordinator.Constants.mainWindowTitle, id: Constants.mainWindowID) {
-            MainWindowView(coordinator: $coordinator)
+            MainWindowView(coordinator: .constant(coordinator))
                 .toolbarBackground(Color(nsColor: Constants.toolbarColor), for: .windowToolbar)
                 .frame(minWidth: Constants.mainWindowMinWidth, minHeight: Constants.mainWindowMinHeight)
         }
@@ -90,40 +93,15 @@ struct GeminiDesktopApp: App {
         }
 
         Settings {
-            SettingsView(coordinator: $coordinator)
+            SettingsView(coordinator: .constant(coordinator))
         }
         .defaultSize(width: Constants.settingsWindowDefaultWidth, height: Constants.settingsWindowDefaultHeight)
-
-        MenuBarExtra {
-            MenuBarView(coordinator: $coordinator)
-        } label: {
-            Image(systemName: Constants.menuBarIcon)
-                .onAppear {
-                    let hideWindowAtLaunch = UserDefaults.standard.bool(forKey: UserDefaultsKeys.hideWindowAtLaunch.rawValue)
-                    let hideDockIcon = UserDefaults.standard.bool(forKey: UserDefaultsKeys.hideDockIcon.rawValue)
-
-                    if hideDockIcon || hideWindowAtLaunch {
-                        NSApp.setActivationPolicy(.accessory)
-                        if hideWindowAtLaunch {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + Constants.hideWindowDelay) {
-                                for window in NSApp.windows {
-                                    if window.identifier?.rawValue == Constants.mainWindowID || window.title == AppCoordinator.Constants.mainWindowTitle {
-                                        window.orderOut(nil)
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        NSApp.setActivationPolicy(.regular)
-                    }
-                }
-        }
-        .menuBarExtraStyle(.menu)
     }
 
     init() {
-        KeyboardShortcuts.onKeyDown(for: .bringToFront) { [self] in
-            coordinator.toggleChatBar()
+        // Register keyboard shortcut
+        KeyboardShortcuts.onKeyDown(for: .bringToFront) {
+            AppDelegate.shared?.sharedCoordinator?.toggleChatBar()
         }
     }
 }

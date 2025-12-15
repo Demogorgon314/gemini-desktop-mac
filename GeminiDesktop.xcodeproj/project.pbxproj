@@ -20,6 +20,7 @@
 			membershipExceptions = (
 				AppDelegate.swift,
 				GeminiDesktopApp.swift,
+				MenuBarController.swift,
 			);
 			target = 74CBD8A92EED8FCB00F226E3 /* GeminiDesktop */;
 		};
