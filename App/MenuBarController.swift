@@ -92,19 +92,31 @@ class MenuBarController: NSObject {
     }
     
     @objc private func openSettings() {
-        // Try multiple approaches to open settings
+        // Essential: Activate the app first, otherwise menu actions or key events may be ignored
+        // or blocked if the app is in the background.
+        NSApp.activate(ignoringOtherApps: true)
         
-        // Approach 1: Standard macOS settings selector
+        // Approach 1: Programmatically invoke the standard "Settings..." menu item from the App Menu
+        // This is robust because it uses the exact same action standard macOS menu items use.
+        if let appMenu = NSApp.mainMenu?.items.first?.submenu {
+            for item in appMenu.items {
+                // Check for key equivalent "," which is standard for Settings
+                if item.keyEquivalent == "," {
+                    if let action = item.action {
+                        NSApp.sendAction(action, to: item.target, from: item)
+                        return
+                    }
+                }
+            }
+        }
+        
+        // Approach 2: Standard macOS settings selector fallback
         if NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) {
             return
         }
         
-        // Approach 2: Legacy preferences selector
-        if NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil) {
-            return
-        }
-        
-        // Approach 3: Simulate Cmd+, keyboard shortcut
+        // Approach 3: Simulate Cmd+, keyboard shortcut fallback
+        // This is a last resort but effective if the app is active
         let event = NSEvent.keyEvent(
             with: .keyDown,
             location: NSPoint.zero,
@@ -115,7 +127,7 @@ class MenuBarController: NSObject {
             characters: ",",
             charactersIgnoringModifiers: ",",
             isARepeat: false,
-            keyCode: 43
+            keyCode: 43 // Virtual key code for comma
         )
         
         if let event = event {
