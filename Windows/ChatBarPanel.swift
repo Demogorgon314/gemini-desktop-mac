@@ -220,6 +220,13 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
         UserDefaults.standard.set(frame.height, forKey: UserDefaultsKeys.panelHeight.rawValue)
     }
 
+    // MARK: - Keyboard Handling
+
+    /// Handle ESC key to hide the chat bar
+    override func cancelOperation(_ sender: Any?) {
+        orderOut(nil)
+    }
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 }
