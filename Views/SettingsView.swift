@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.pageZoom.rawValue) private var pageZoom: Double = Constants.defaultPageZoom
     @AppStorage(UserDefaultsKeys.hideWindowAtLaunch.rawValue) private var hideWindowAtLaunch: Bool = false
     @AppStorage(UserDefaultsKeys.hideDockIcon.rawValue) private var hideDockIcon: Bool = false
+    @AppStorage(UserDefaultsKeys.resetChatBarPosition.rawValue) private var resetChatBarPosition: Bool = true
 
     @State private var showingResetAlert = false
     @State private var isClearing = false
@@ -27,6 +28,9 @@ struct SettingsView: View {
                     .onChange(of: hideDockIcon) { _, newValue in
                         NSApp.setActivationPolicy(newValue ? .accessory : .regular)
                     }
+            }
+            Section("Chat Bar") {
+                Toggle("Reset Position When Shown", isOn: $resetChatBarPosition)
             }
             Section("Keyboard Shortcuts") {
                 HStack {

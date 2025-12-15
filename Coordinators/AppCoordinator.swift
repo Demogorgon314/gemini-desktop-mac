@@ -131,8 +131,15 @@ class AppCoordinator {
         closeMainWindow()
 
         if let bar = chatBar {
-            // Reuse existing chat bar - reposition to current mouse screen
-            repositionChatBarToMouseScreen(bar)
+            // Check if we should reset position to default
+            let shouldResetPosition = UserDefaults.standard.object(forKey: UserDefaultsKeys.resetChatBarPosition.rawValue) as? Bool ?? true
+            
+            if shouldResetPosition {
+                // Reuse existing chat bar - reposition to current mouse screen
+                repositionChatBarToMouseScreen(bar)
+            }
+            // If not resetting, keep the current position
+            
             bar.orderFront(nil)
             bar.makeKeyAndOrderFront(nil)
             bar.checkAndAdjustSize()
