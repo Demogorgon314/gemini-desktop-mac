@@ -49,7 +49,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
         })();
         """
 
-    // JavaScript to focus the input field
+    // JavaScript to focus the input field and setup Enter key handler
     private let focusInputScript = """
         (function() {
             const input = document.querySelector('rich-textarea[aria-label="Enter a prompt here"]') ||
@@ -57,6 +57,27 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
                           document.querySelector('textarea');
             if (input) {
                 input.focus();
+                
+                // Add Enter key listener if not already added
+                if (!input.dataset.hasEnterHandler) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Try to find the send button
+                            const sendButton = document.querySelector('button[aria-label="Send message"]') ||
+                                             document.querySelector('button.send-button') ||
+                                             document.querySelector('button[data-testid="send-button"]') ||
+                                             document.querySelector('button .material-symbols-outlined[data-test-id="send-icon"]')?.closest('button');
+                            
+                            if (sendButton) {
+                                sendButton.click();
+                            }
+                        }
+                    }, true); // Use capture to ensure we handle it first
+                    input.dataset.hasEnterHandler = 'true';
+                }
                 return true;
             }
             return false;
@@ -180,6 +201,9 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
             )
             self.animator().setFrame(newFrame, display: true)
         }
+        
+        // Ensure input is focused and handler attached when expanding
+        focusInput()
     }
 
     func resetToInitialSize() {
@@ -202,7 +226,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate {
     func checkAndAdjustSize() {
         guard let webView = webView else { return }
 
-        // Focus the input field
+        // Focus the input field (and attaching handler)
         focusInput()
 
         webView.evaluateJavaScript(checkConversationScript) { [weak self] result, _ in
