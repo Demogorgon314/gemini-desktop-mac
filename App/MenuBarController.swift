@@ -45,9 +45,9 @@ class MenuBarController: NSObject {
         let leftClickAction = UserDefaults.standard.string(forKey: UserDefaultsKeys.leftClickAction.rawValue) ?? "chatBar"
         
         if leftClickAction == "mainWindow" {
-            coordinator.openMainWindow()
+            coordinator.toggleMainWindow()
         } else {
-            coordinator.showChatBar()
+            coordinator.toggleChatBar()
         }
     }
     
