@@ -47,6 +47,11 @@ class DragHandleNSView: NSView {
         if !isDragging {
             // It was a click, not a drag
             onTap?()
+        } else {
+            // Drag ended - constrain window to screen bounds
+            if let chatBarPanel = self.window as? ChatBarPanel {
+                chatBarPanel.constrainToScreen()
+            }
         }
         isDragging = false
         mouseDownLocation = nil
