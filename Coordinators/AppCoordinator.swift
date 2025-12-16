@@ -16,12 +16,12 @@ extension Notification.Name {
 @Observable
 class AppCoordinator {
     private var chatBar: ChatBarPanel?
-    var geminiWebView = GeminiWebView()
+    var webViewModel = WebViewModel()
 
     var openWindowAction: ((String) -> Void)?
 
-    var canGoBack: Bool { geminiWebView.canGoBack }
-    var canGoForward: Bool { geminiWebView.canGoForward }
+    var canGoBack: Bool { webViewModel.canGoBack }
+    var canGoForward: Bool { webViewModel.canGoForward }
 
     init() {
         // Observe notifications for window opening
@@ -32,16 +32,16 @@ class AppCoordinator {
 
     // MARK: - Navigation
 
-    func goBack() { geminiWebView.goBack() }
-    func goForward() { geminiWebView.goForward() }
-    func goHome() { geminiWebView.loadHome() }
-    func reload() { geminiWebView.reload() }
+    func goBack() { webViewModel.goBack() }
+    func goForward() { webViewModel.goForward() }
+    func goHome() { webViewModel.loadHome() }
+    func reload() { webViewModel.reload() }
 
     // MARK: - Zoom
 
-    func zoomIn() { geminiWebView.zoomIn() }
-    func zoomOut() { geminiWebView.zoomOut() }
-    func resetZoom() { geminiWebView.resetZoom() }
+    func zoomIn() { webViewModel.zoomIn() }
+    func zoomOut() { webViewModel.zoomOut() }
+    func resetZoom() { webViewModel.resetZoom() }
 
     // MARK: - Chat Bar
 
@@ -58,7 +58,7 @@ class AppCoordinator {
         }
 
         let contentView = ChatBarView(
-            webView: geminiWebView.wkWebView,
+            webView: webViewModel.wkWebView,
             onExpandToMain: { [weak self] in
                 self?.expandToMainWindow()
             }

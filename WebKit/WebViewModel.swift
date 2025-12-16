@@ -1,5 +1,5 @@
 //
-//  GeminiWebView.swift
+//  WebViewModel.swift
 //  GeminiDesktop
 //
 //  Created by alexcding on 2025-12-15.
@@ -10,7 +10,7 @@ import Combine
 
 /// Observable wrapper around WKWebView with Gemini-specific functionality
 @Observable
-class GeminiWebView {
+class WebViewModel {
 
     // MARK: - Constants
 
