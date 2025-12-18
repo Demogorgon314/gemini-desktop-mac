@@ -341,6 +341,27 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
         }
     }
 
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.allow)
+            return
+        }
+
+        // Allow navigation within Google domains (gemini.google.com, accounts.google.com, etc.)
+        let host = url.host?.lowercased() ?? ""
+        let isGoogleDomain = host.hasSuffix("google.com") || host.hasSuffix("googleapis.com")
+
+        // For user-initiated link clicks to external sites, open in default browser
+        if navigationAction.navigationType == .linkActivated && !isGoogleDomain {
+            NSWorkspace.shared.open(url)
+            decisionHandler(.cancel)
+            return
+        }
+
+        decisionHandler(.allow)
+    }
+
     /// Scroll the WebView content to the top to ensure header is visible
     private func scrollToTop() {
         let scrollScript = """
@@ -350,7 +371,6 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
         """
         webView?.evaluateJavaScript(scrollScript, completionHandler: nil)
     }
-
 
     /// Setup the message handler to receive input height changes from JavaScript
     private func setupInputHeightObserver() {
@@ -367,7 +387,6 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             self?.initializeMenuVisibilityObserver()
         }
     }
-
 
     /// Initialize the JavaScript observer for menu visibility
     private func initializeMenuVisibilityObserver() {
