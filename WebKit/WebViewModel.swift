@@ -8,6 +8,15 @@
 import WebKit
 import Combine
 
+/// Handles console.log messages from JavaScript
+class ConsoleLogHandler: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if let body = message.body as? String {
+            print("[WebView] \(body)")
+        }
+    }
+}
+
 /// Observable wrapper around WKWebView with Gemini-specific functionality
 @Observable
 class WebViewModel {
@@ -35,11 +44,12 @@ class WebViewModel {
     private var backObserver: NSKeyValueObservation?
     private var forwardObserver: NSKeyValueObservation?
     private var urlObserver: NSKeyValueObservation?
+    private let consoleLogHandler = ConsoleLogHandler()
 
     // MARK: - Initialization
 
     init() {
-        self.wkWebView = Self.createWebView()
+        self.wkWebView = Self.createWebView(consoleLogHandler: consoleLogHandler)
         setupObservers()
         loadHome()
     }
@@ -88,15 +98,21 @@ class WebViewModel {
 
     // MARK: - Private Setup
 
-    private static func createWebView() -> WKWebView {
+    private static func createWebView(consoleLogHandler: ConsoleLogHandler) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
 
+        // Add user scripts
         for script in UserScripts.createAllScripts() {
             configuration.userContentController.addUserScript(script)
         }
+
+        // Register console log message handler (debug only)
+        #if DEBUG
+        configuration.userContentController.add(consoleLogHandler, name: UserScripts.consoleLogHandler)
+        #endif
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
