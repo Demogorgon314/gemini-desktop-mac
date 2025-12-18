@@ -104,20 +104,51 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             }
             
             if (inputInner.dataset.hasHeightObserver) {
-                return inputInner.getBoundingClientRect().height;
+                return getTotalHeight();
             }
             
             inputInner.dataset.hasHeightObserver = 'true';
             
+            // Function to get the uploader height from the CSS variable
+            function getUploaderHeight() {
+                const qlEditor = document.querySelector('.ql-editor');
+                if (qlEditor) {
+                    // First check if there's actually any uploaded content
+                    const filePreviewContainer = document.querySelector('.file-preview-container');
+                    const hasFiles = filePreviewContainer && filePreviewContainer.children.length > 0;
+                    
+                    if (!hasFiles) {
+                        return 0; // No files uploaded, no uploader height needed
+                    }
+                    
+                    const uploaderHeightVar = getComputedStyle(qlEditor).getPropertyValue('--uploader-height');
+                    if (uploaderHeightVar) {
+                        const match = uploaderHeightVar.match(/([\\d.]+)/);
+                        if (match) {
+                            return parseFloat(match[1]);
+                        }
+                    }
+                }
+                return 0;
+            }
+            
+            // Function to calculate total height including uploader
+            function getTotalHeight() {
+                const baseHeight = inputInner.getBoundingClientRect().height;
+                const uploaderHeight = getUploaderHeight();
+                return baseHeight + uploaderHeight;
+            }
+            
             // Store initial height
-            let lastHeight = inputInner.getBoundingClientRect().height;
+            let lastHeight = getTotalHeight();
             console.log('[ChatBar] Initial input height:', lastHeight);
             
             // Function to notify native code of height change
-            function notifyHeightChange(height) {
+            function notifyHeightChange() {
+                const height = getTotalHeight();
                 if (Math.abs(height - lastHeight) > 2) {
                     lastHeight = height;
-                    console.log('[ChatBar] Input height changed:', height);
+                    console.log('[ChatBar] Input height changed:', height, '(uploader:', getUploaderHeight(), ')');
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.inputHeightChanged) {
                         window.webkit.messageHandlers.inputHeightChanged.postMessage({ height: height });
                     }
@@ -126,9 +157,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             
             // Create a ResizeObserver to watch for size changes
             const resizeObserver = new ResizeObserver((entries) => {
-                for (const entry of entries) {
-                    notifyHeightChange(entry.contentRect.height);
-                }
+                notifyHeightChange();
             });
             
             resizeObserver.observe(inputInner);
@@ -138,8 +167,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             const mutationObserver = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                        const height = inputInner.getBoundingClientRect().height;
-                        notifyHeightChange(height);
+                        notifyHeightChange();
                     }
                 }
             });
@@ -149,21 +177,39 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
                 attributeFilter: ['style'] 
             });
             
-            // Also observe the ql-editor for content changes
+            // Also observe the ql-editor for content changes and uploader appearance
             const qlEditor = document.querySelector('.ql-editor');
             if (qlEditor) {
                 resizeObserver.observe(qlEditor);
                 
+                // Watch for style changes on ql-editor (uploader height is set via --uploader-height CSS variable)
+                mutationObserver.observe(qlEditor, {
+                    attributes: true,
+                    attributeFilter: ['style']
+                });
+                
                 // Watch for input events on the editor
                 qlEditor.addEventListener('input', () => {
-                    setTimeout(() => {
-                        const height = inputInner.getBoundingClientRect().height;
-                        notifyHeightChange(height);
-                    }, 10);
+                    setTimeout(notifyHeightChange, 10);
                 });
             }
             
-            return inputInner.getBoundingClientRect().height;
+            // Also observe the text input field container for uploader elements being added/removed
+            const textInputField = document.querySelector('.text-input-field') || inputInner.closest('.text-input-field');
+            if (textInputField) {
+                const uploaderObserver = new MutationObserver((mutations) => {
+                    // Check for any child list changes that might indicate uploader appearance
+                    setTimeout(notifyHeightChange, 50);
+                });
+                uploaderObserver.observe(textInputField, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
+            }
+            
+            return getTotalHeight();
         })();
         """
     
@@ -316,6 +362,16 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
         webView?.evaluateJavaScript(scrollScript, completionHandler: nil)
     }
     
+    /// Scroll the WebView content to ensure input area is visible
+    private func scrollToBottom() {
+        let scrollScript = """
+            window.scrollTo(0, document.body.scrollHeight);
+            document.documentElement.scrollTop = document.documentElement.scrollHeight;
+            document.body.scrollTop = document.body.scrollHeight;
+        """
+        webView?.evaluateJavaScript(scrollScript, completionHandler: nil)
+    }
+    
     /// Setup the message handler to receive input height changes from JavaScript
     private func setupInputHeightObserver() {
         guard let webView = webView, !inputHeightObserverSetup else { return }
@@ -414,8 +470,8 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             self.animator().setFrame(newFrame, display: true)
-        }, completionHandler: {
-            self.isAdjustingHeightProgrammatically = false
+        }, completionHandler: { [weak self] in
+            self?.isAdjustingHeightProgrammatically = false
         })
     }
 
