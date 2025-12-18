@@ -29,13 +29,13 @@ struct SettingsView: View {
                     .onChange(of: hideDockIcon) { _, newValue in
                         NSApp.setActivationPolicy(newValue ? .accessory : .regular)
                     }
-            }
-            Section("Chat Bar") {
                 Picker("Left-Click Action:", selection: $leftClickAction) {
                     Text("Open ChatBar").tag("chatBar")
                     Text("Open Main Window").tag("mainWindow")
                 }
                 .pickerStyle(.menu)
+            }
+            Section("Chat Bar") {
                 Toggle("Reset Position When Shown", isOn: $resetChatBarPosition)
             }
             Section("Keyboard Shortcuts") {
