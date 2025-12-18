@@ -32,6 +32,26 @@ struct GeminiWebView: NSViewRepresentable {
             return nil
         }
 
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+            
+            // Allow navigation within Google domains (gemini.google.com, accounts.google.com, etc.)
+            let host = url.host?.lowercased() ?? ""
+            let isGoogleDomain = host.hasSuffix("google.com") || host.hasSuffix("googleapis.com")
+            
+            // For user-initiated link clicks to external sites, open in default browser
+            if navigationAction.navigationType == .linkActivated && !isGoogleDomain {
+                NSWorkspace.shared.open(url)
+                decisionHandler(.cancel)
+                return
+            }
+            
+            decisionHandler(.allow)
+        }
+
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
             if navigationResponse.canShowMIMEType {
                 decisionHandler(.allow)
