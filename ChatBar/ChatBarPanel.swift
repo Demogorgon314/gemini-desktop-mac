@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 import WebKit
 
-class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
+class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigationDelegate {
 
     private var initialSize: NSSize {
         let width = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelWidth.rawValue)
@@ -37,6 +37,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
     private var isExpanded = false
     private var pollingTimer: Timer?
     private weak var webView: WKWebView?
+    private var hasScrolledToTopAfterLoad = false
 
     // Returns true if in a conversation (not on start page)
     private let checkConversationScript = """
@@ -58,6 +59,11 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
             if (input) {
                 input.focus();
                 
+                // Scroll to top to ensure header area is visible
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+
                 // Add Enter key listener if not already added
                 if (!input.dataset.hasEnterHandler) {
                     input.addEventListener('keydown', (e) => {
@@ -119,7 +125,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
             // Setup observer for a specific input element
             function setupInputObserver() {
                 const inputInner = document.querySelector('.text-input-field_textarea-inner');
-                
+
                 if (!inputInner) {
                     console.log('[ChatBar] Input inner not found, will retry...');
                     return null;
@@ -253,6 +259,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
     private func findWebView(in view: NSView) {
         if let wk = view as? WKWebView {
             self.webView = wk
+            wk.navigationDelegate = self
             setupInputHeightObserver()
             return
         }
@@ -260,6 +267,29 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler {
             findWebView(in: subview)
         }
     }
+
+    // MARK: - WKNavigationDelegate
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Scroll to top after page finishes loading to ensure header is visible
+        if !hasScrolledToTopAfterLoad {
+            hasScrolledToTopAfterLoad = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.scrollToTop()
+            }
+        }
+    }
+
+    /// Scroll the WebView content to the top to ensure header is visible
+    private func scrollToTop() {
+        let scrollScript = """
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        """
+        webView?.evaluateJavaScript(scrollScript, completionHandler: nil)
+    }
+
 
     /// Setup the message handler to receive input height changes from JavaScript
     private func setupInputHeightObserver() {
