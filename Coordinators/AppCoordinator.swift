@@ -28,12 +28,25 @@ class AppCoordinator {
     private var isAtHome: Bool = true
 
     var openWindowAction: ((String) -> Void)?
+    
+    private let downloadHandler = DownloadHandler()
 
     init() {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        // Add message handler for blob downloads
+        configuration.userContentController.add(downloadHandler, name: "blobDownload")
+        
+        // Inject script to intercept blob downloads
+        let downloadScript = WKUserScript(
+            source: AppCoordinator.blobDownloadInterceptScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        configuration.userContentController.addUserScript(downloadScript)
 
         let wv = WKWebView(frame: .zero, configuration: configuration)
         wv.allowsBackForwardNavigationGestures = true
@@ -300,5 +313,151 @@ extension AppCoordinator {
         static let mainWindowIdentifier = "main"
         static let mainWindowTitle = "Gemini Desktop"
     }
+    
+    // JavaScript to intercept blob downloads
+    static let blobDownloadInterceptScript = """
+    (function() {
+        // Store blob URLs and their corresponding blobs
+        const blobRegistry = new Map();
+        
+        // Override URL.createObjectURL to track blob URLs
+        const originalCreateObjectURL = URL.createObjectURL;
+        URL.createObjectURL = function(blob) {
+            const url = originalCreateObjectURL.call(URL, blob);
+            if (blob instanceof Blob) {
+                blobRegistry.set(url, blob);
+            }
+            return url;
+        };
+        
+        // Override URL.revokeObjectURL to clean up
+        const originalRevokeObjectURL = URL.revokeObjectURL;
+        URL.revokeObjectURL = function(url) {
+            blobRegistry.delete(url);
+            return originalRevokeObjectURL.call(URL, url);
+        };
+        
+        // Intercept clicks on download links
+        document.addEventListener('click', function(event) {
+            const anchor = event.target.closest('a[download]');
+            if (!anchor) return;
+            
+            const href = anchor.href;
+            if (!href || !href.startsWith('blob:')) return;
+            
+            const blob = blobRegistry.get(href);
+            if (!blob) return;
+            
+            // Prevent default navigation
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Read blob and send to native
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                const filename = anchor.download || 'download';
+                window.webkit.messageHandlers.blobDownload.postMessage({
+                    data: reader.result,
+                    mimeType: blob.type || 'application/octet-stream',
+                    filename: filename
+                });
+            };
+            reader.readAsDataURL(blob);
+        }, true);
+    })();
+    """
 
+}
+
+// MARK: - Download Handler
+
+class DownloadHandler: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "blobDownload",
+              let body = message.body as? [String: Any],
+              let base64Data = body["data"] as? String,
+              let mimeType = body["mimeType"] as? String,
+              let filename = body["filename"] as? String else {
+            return
+        }
+        
+        // Remove the data URL prefix if present (e.g., "data:image/png;base64,")
+        let base64String: String
+        if let commaIndex = base64Data.firstIndex(of: ",") {
+            base64String = String(base64Data[base64Data.index(after: commaIndex)...])
+        } else {
+            base64String = base64Data
+        }
+        
+        guard let data = Data(base64Encoded: base64String) else {
+            showDownloadError("Failed to decode download data")
+            return
+        }
+        
+        saveBlobData(data, filename: filename, mimeType: mimeType)
+    }
+    
+    private func mimeTypeToExtension(_ mimeType: String) -> String {
+        let mimeMap: [String: String] = [
+            "image/png": "png",
+            "image/jpeg": "jpg",
+            "image/gif": "gif",
+            "image/webp": "webp",
+            "image/svg+xml": "svg",
+            "application/pdf": "pdf",
+            "application/zip": "zip",
+            "application/json": "json",
+            "text/plain": "txt",
+            "text/html": "html",
+            "text/css": "css",
+            "text/javascript": "js",
+            "application/javascript": "js",
+            "audio/mpeg": "mp3",
+            "audio/wav": "wav",
+            "video/mp4": "mp4",
+            "video/webm": "webm",
+            "application/octet-stream": "bin",
+            "text/markdown": "md",
+            "application/x-python": "py",
+            "text/x-python": "py"
+        ]
+        return mimeMap[mimeType] ?? mimeType.components(separatedBy: "/").last ?? "bin"
+    }
+    
+    private func saveBlobData(_ data: Data, filename: String, mimeType: String) {
+        DispatchQueue.main.async {
+            // Check if filename has an extension, if not add one based on mimeType
+            var finalFilename = filename
+            if !filename.contains(".") || filename.hasSuffix(".") {
+                let ext = self.mimeTypeToExtension(mimeType)
+                finalFilename = filename.hasSuffix(".") ? "\(filename)\(ext)" : "\(filename).\(ext)"
+            }
+            
+            let savePanel = NSSavePanel()
+            savePanel.nameFieldStringValue = finalFilename
+            savePanel.canCreateDirectories = true
+            
+            savePanel.begin { response in
+                if response == .OK, let url = savePanel.url {
+                    do {
+                        try data.write(to: url)
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    } catch {
+                        self.showDownloadError("Failed to save file: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    private func showDownloadError(_ message: String) {
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Download Failed"
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
 }

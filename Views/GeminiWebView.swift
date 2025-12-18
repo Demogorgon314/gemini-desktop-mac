@@ -22,8 +22,35 @@ struct GeminiWebView: NSViewRepresentable {
         Coordinator()
     }
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
         private var downloadDestination: URL?
+        
+        // MARK: - WKScriptMessageHandler
+        
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == "blobDownload",
+                  let body = message.body as? [String: Any],
+                  let base64Data = body["data"] as? String,
+                  let mimeType = body["mimeType"] as? String,
+                  let filename = body["filename"] as? String else {
+                return
+            }
+            
+            // Remove the data URL prefix if present (e.g., "data:image/png;base64,")
+            let base64String: String
+            if let commaIndex = base64Data.firstIndex(of: ",") {
+                base64String = String(base64Data[base64Data.index(after: commaIndex)...])
+            } else {
+                base64String = base64Data
+            }
+            
+            guard let data = Data(base64Encoded: base64String) else {
+                showDownloadError("Failed to decode download data")
+                return
+            }
+            
+            saveBlobData(data, filename: filename, mimeType: mimeType)
+        }
 
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
             if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
@@ -35,6 +62,14 @@ struct GeminiWebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             guard let url = navigationAction.request.url else {
                 decisionHandler(.allow)
+                return
+            }
+            
+            // Handle blob: URLs - cancel navigation, downloads are handled by injected script
+            if url.scheme == "blob" {
+                decisionHandler(.cancel)
+                // The injected JavaScript should have already handled the download
+                // If we get here, the script didn't catch it, so we can't do much
                 return
             }
             
@@ -50,6 +85,58 @@ struct GeminiWebView: NSViewRepresentable {
             }
             
             decisionHandler(.allow)
+        }
+        
+        private func mimeTypeToExtension(_ mimeType: String) -> String {
+            let mimeMap: [String: String] = [
+                "image/png": "png",
+                "image/jpeg": "jpg",
+                "image/gif": "gif",
+                "image/webp": "webp",
+                "image/svg+xml": "svg",
+                "application/pdf": "pdf",
+                "application/zip": "zip",
+                "application/json": "json",
+                "text/plain": "txt",
+                "text/html": "html",
+                "text/css": "css",
+                "text/javascript": "js",
+                "application/javascript": "js",
+                "audio/mpeg": "mp3",
+                "audio/wav": "wav",
+                "video/mp4": "mp4",
+                "video/webm": "webm",
+                "application/octet-stream": "bin"
+            ]
+            return mimeMap[mimeType] ?? mimeType.components(separatedBy: "/").last ?? "bin"
+        }
+        
+        private func saveBlobData(_ data: Data, filename: String, mimeType: String? = nil) {
+            let savePanel = NSSavePanel()
+            savePanel.nameFieldStringValue = filename
+            savePanel.canCreateDirectories = true
+            
+            savePanel.begin { [weak self] response in
+                if response == .OK, let url = savePanel.url {
+                    do {
+                        try data.write(to: url)
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    } catch {
+                        self?.showDownloadError("Failed to save file: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+        
+        private func showDownloadError(_ message: String) {
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Download Failed"
+                alert.informativeText = message
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
