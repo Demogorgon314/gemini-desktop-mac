@@ -586,7 +586,7 @@ extension ChatBarPanel {
 
     struct Constants {
         static let defaultWidth: CGFloat = 500
-        static let defaultHeight: CGFloat = 200
+        static let defaultHeight: CGFloat = 202
         static let minWidth: CGFloat = 300
         static let minHeight: CGFloat = 150
         static let maxWidth: CGFloat = 900
