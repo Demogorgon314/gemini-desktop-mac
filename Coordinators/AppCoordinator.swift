@@ -436,6 +436,7 @@ class DownloadHandler: NSObject, WKScriptMessageHandler {
             let savePanel = NSSavePanel()
             savePanel.nameFieldStringValue = finalFilename
             savePanel.canCreateDirectories = true
+            savePanel.level = .floating  // Ensure panel appears above ChatBar
             
             savePanel.begin { response in
                 if response == .OK, let url = savePanel.url {
