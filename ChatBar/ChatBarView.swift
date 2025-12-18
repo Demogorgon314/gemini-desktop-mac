@@ -78,28 +78,52 @@ struct DragHandleView: NSViewRepresentable {
 struct ChatBarView: View {
     let webView: WKWebView
     let onExpandToMain: () -> Void
+    let onClose: () -> Void
+    
+    @State private var isHovering = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             GeminiWebView(webView: webView)
 
-            // Drag handle button - supports both drag and click
-            ZStack {
-                // Visual appearance
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: Constants.buttonFontSize, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(width: Constants.buttonSize, height: Constants.buttonSize)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .allowsHitTesting(false)
+            // Button container with hover detection
+            HStack(spacing: Constants.buttonSpacing) {
+                // Drag handle button - supports both drag and click
+                ZStack {
+                    // Visual appearance
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: Constants.buttonFontSize, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: Constants.buttonSize, height: Constants.buttonSize)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .allowsHitTesting(false)
+                    
+                    // Native drag handling overlay
+                    DragHandleView(onTap: onExpandToMain)
+                        .frame(width: Constants.buttonSize, height: Constants.buttonSize)
+                        .clipShape(Circle())
+                }
                 
-                // Native drag handling overlay
-                DragHandleView(onTap: onExpandToMain)
-                    .frame(width: Constants.buttonSize, height: Constants.buttonSize)
-                    .clipShape(Circle())
+                // Close button - appears on hover
+                if isHovering {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: Constants.buttonFontSize, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: Constants.buttonSize, height: Constants.buttonSize)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
             .padding(Constants.buttonPadding)
             .offset(x: Constants.buttonOffsetX)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: Constants.hoverAnimationDuration)) {
+                    isHovering = hovering
+                }
+            }
         }
     }
 }
@@ -112,6 +136,8 @@ extension ChatBarView {
         static let buttonPadding: CGFloat = 16
         static let buttonOffsetX: CGFloat = -2
         static let dragThreshold: CGFloat = 3
+        static let buttonSpacing: CGFloat = 8
+        static let hoverAnimationDuration: Double = 0.2
     }
 
 }

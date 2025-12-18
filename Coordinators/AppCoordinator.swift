@@ -71,6 +71,9 @@ class AppCoordinator {
             webView: webViewModel.wkWebView,
             onExpandToMain: { [weak self] in
                 self?.expandToMainWindow()
+            },
+            onClose: { [weak self] in
+                self?.hideChatBar()
             }
         )
         let hostingView = NSHostingView(rootView: contentView)
