@@ -167,8 +167,69 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
         })();
         """
     
+    // JavaScript to observe menu visibility changes
+    private let observeMenuVisibilityScript = """
+        (function() {
+            function checkMenu() {
+                // 1. Check Angular CDK overlay popups (excluding tooltips)
+                const overlay = document.querySelector('.cdk-overlay-container');
+                let hasRealPopup = false;
+                if (overlay) {
+                    const children = Array.from(overlay.children);
+                    hasRealPopup = children.some(child => {
+                        return !child.querySelector('[role="tooltip"], .mat-mdc-tooltip-panel, .mat-tooltip-panel, .gmat-tooltip-panel');
+                    });
+                }
+                
+                // 2. Check for standard menus
+                const hasMenu = document.querySelector('[role="menu"], [role="listbox"], .mat-menu-panel, .popover, .dropdown-menu') !== null;
+                
+                // 3. Check for Google account menu (aria-expanded="true" on the avatar button)
+                const hasExpandedButton = document.querySelector('.gb_B[aria-expanded="true"], [role="button"][aria-expanded="true"]') !== null;
+                
+                // 4. Check for visible iframe-based menus (Google account dropdown)
+                const iframeContainers = document.querySelectorAll('.gb_2d iframe[name="account"]');
+                let hasVisibleIframe = false;
+                iframeContainers.forEach(iframe => {
+                    const container = iframe.parentElement;
+                    if (container && container.style.visibility !== 'hidden' && container.style.height !== '0px') {
+                        hasVisibleIframe = true;
+                    }
+                });
+                
+                return hasRealPopup || hasMenu || hasExpandedButton || hasVisibleIframe;
+            }
+
+            let lastVisible = false;
+            const observer = new MutationObserver(() => {
+                const isVisible = checkMenu();
+                if (isVisible !== lastVisible) {
+                    lastVisible = isVisible;
+                    console.log('[ChatBar] Menu visibility changed:', isVisible);
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.menuVisibilityChanged) {
+                        window.webkit.messageHandlers.menuVisibilityChanged.postMessage({ isVisible: isVisible });
+                    }
+                }
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-expanded', 'style', 'class'] });
+            
+            // Initial check
+            const isVisible = checkMenu();
+            if (isVisible) {
+                lastVisible = true;
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.menuVisibilityChanged) {
+                    window.webkit.messageHandlers.menuVisibilityChanged.postMessage({ isVisible: true });
+                }
+            }
+        })();
+        """
+    
     private var inputHeightObserverSetup = false
     private var baseInputHeight: CGFloat = 0
+    private var isMenuVisible = false
+    private var lastInputHeight: CGFloat = 0
+    private var isAdjustingHeightProgrammatically = false
 
     init(contentView: NSView) {
         let width = UserDefaults.standard.double(forKey: UserDefaultsKeys.panelWidth.rawValue)
@@ -240,13 +301,21 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
         guard let webView = webView, !inputHeightObserverSetup else { return }
         inputHeightObserverSetup = true
         
-        // Add message handler for input height changes
+        // Add message handlers
         webView.configuration.userContentController.add(self, name: "inputHeightChanged")
+        webView.configuration.userContentController.add(self, name: "menuVisibilityChanged")
         
         // Delay slightly to ensure page is loaded
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.initializeInputHeightObserver()
+            self?.initializeMenuVisibilityObserver()
         }
+    }
+    
+    /// Initialize the JavaScript observer for menu visibility
+    private func initializeMenuVisibilityObserver() {
+        guard let webView = webView else { return }
+        webView.evaluateJavaScript(observeMenuVisibilityScript, completionHandler: nil)
     }
     
     /// Initialize the JavaScript observer for input height
@@ -264,57 +333,70 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
     // MARK: - WKScriptMessageHandler
     
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "inputHeightChanged",
-              let body = message.body as? [String: Any],
-              let height = body["height"] as? CGFloat else { return }
-        
-        adjustHeightForInput(newInputHeight: height)
+        if message.name == "inputHeightChanged",
+           let body = message.body as? [String: Any],
+           let height = body["height"] as? CGFloat {
+            lastInputHeight = height
+            adjustPanelHeight()
+        } else if message.name == "menuVisibilityChanged",
+                  let body = message.body as? [String: Any],
+                  let isVisible = body["isVisible"] as? Bool {
+            isMenuVisible = isVisible
+            adjustPanelHeight()
+        }
     }
     
-    /// Adjust panel height based on input field height changes
-    private func adjustHeightForInput(newInputHeight: CGFloat) {
-        // Only adjust when not expanded (on start page)
+    /// Adjust panel height based on input height and menu visibility
+    private func adjustPanelHeight() {
+        // Only adjust when not expanded (on start page or in basic chat bar mode)
         guard !isExpanded else { return }
         
-        // If base height is not set yet, set it now and don't adjust
-        if baseInputHeight <= 0 {
-            baseInputHeight = newInputHeight
-            print("[ChatBar] Set base input height: \(baseInputHeight)")
-            return
+        var targetHeight: CGFloat = Constants.defaultHeight
+        
+        // 1. Consider Input Height
+        if lastInputHeight > 0 && baseInputHeight > 0 {
+            let heightDiff = lastInputHeight - baseInputHeight
+            targetHeight = max(Constants.defaultHeight, min(Constants.defaultHeight + heightDiff, Constants.maxInputExpandHeight))
         }
         
-        // Calculate height difference from base (can be negative for shrinking)
-        let heightDiff = newInputHeight - baseInputHeight
-        
-        // Calculate new panel height using default height as baseline (not user-saved size)
-        // This ensures consistent behavior regardless of user's saved panel size
-        let newPanelHeight = max(
-            Constants.defaultHeight,
-            min(Constants.defaultHeight + heightDiff, Constants.maxInputExpandHeight)
-        )
+        // 2. Consider Menu Visibility
+        if isMenuVisible {
+            // Expand to a taller height to accommodate menus
+            targetHeight = max(targetHeight, Constants.menuExpandHeight)
+        }
         
         // Don't resize if panel height change is negligible
-        guard abs(frame.height - newPanelHeight) > 2 else { return }
+        guard abs(frame.height - targetHeight) > 2 else { return }
         
-        print("[ChatBar] Adjusting height: base=\(baseInputHeight), new=\(newInputHeight), diff=\(heightDiff), panelHeight=\(newPanelHeight)")
+        print("[ChatBar] Adjusting height: inputHeight=\(lastInputHeight), isMenuVisible=\(isMenuVisible), oldHeight=\(frame.height), newHeight=\(targetHeight)")
         
         let currentFrame = frame
-        
-        // Keep the bottom of the panel fixed, expand upward
-        // In macOS coordinates, origin is bottom-left, so we keep origin.y the same
         let newFrame = NSRect(
             x: currentFrame.origin.x,
-            y: currentFrame.origin.y,  // Keep bottom position fixed
+            y: currentFrame.origin.y, // Maintain bottom pivot
             width: currentFrame.width,
-            height: newPanelHeight
+            height: targetHeight
         )
         
+        // Ensure we don't exceed screen boundaries
+        if let screen = currentScreen {
+            let maxAvailableHeight = screen.visibleFrame.maxY - currentFrame.origin.y - Constants.topPadding
+            if newFrame.height > maxAvailableHeight {
+                // If the screen isn't tall enough, we might need to shift the origin.y down
+                // but usually the chat bar is at the bottom, so this shouldn't be a huge issue
+                // unless the user dragged it way up.
+            }
+        }
+        
         // Animate the resize
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.1
+        isAdjustingHeightProgrammatically = true
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             self.animator().setFrame(newFrame, display: true)
-        }
+        }, completionHandler: {
+            self.isAdjustingHeightProgrammatically = false
+        })
     }
 
     private func configureWindow() {
@@ -448,13 +530,17 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
     deinit {
         pollingTimer?.invalidate()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "inputHeightChanged")
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "menuVisibilityChanged")
     }
 
     // MARK: - NSWindowDelegate
 
     func windowDidResize(_ notification: Notification) {
-        // Only persist size when in initial (non-expanded) state
-        guard !isExpanded else { return }
+        // Only persist size when:
+        // 1. Not in expanded state
+        // 2. Not currently adjusting height programmatically (for input/menu)
+        // 3. No menu is visible (to avoid saving the menu-expanded height)
+        guard !isExpanded && !isAdjustingHeightProgrammatically && !isMenuVisible else { return }
 
         UserDefaults.standard.set(frame.width, forKey: UserDefaultsKeys.panelWidth.rawValue)
         UserDefaults.standard.set(frame.height, forKey: UserDefaultsKeys.panelHeight.rawValue)
@@ -529,6 +615,7 @@ extension ChatBarPanel {
         static let webViewSearchDelay: TimeInterval = 0.5
         static let topPadding: CGFloat = 20 // Padding from the top of the screen
         static let maxInputExpandHeight: CGFloat = 400 // Maximum height when input expands
+        static let menuExpandHeight: CGFloat = 550 // Height to show menus
 
     }
 }
