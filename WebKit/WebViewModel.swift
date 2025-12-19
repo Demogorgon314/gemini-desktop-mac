@@ -7,12 +7,106 @@
 
 import WebKit
 import Combine
+import AppKit
 
 /// Handles console.log messages from JavaScript
 class ConsoleLogHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         if let body = message.body as? String {
             print("[WebView] \(body)")
+        }
+    }
+}
+
+/// Handles blob downloads from JavaScript
+class BlobDownloadHandler: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == UserScripts.blobDownloadHandler,
+              let body = message.body as? [String: Any],
+              let base64Data = body["data"] as? String,
+              let mimeType = body["mimeType"] as? String,
+              let filename = body["filename"] as? String else {
+            return
+        }
+        
+        // Remove the data URL prefix if present (e.g., "data:image/png;base64,")
+        let base64String: String
+        if let commaIndex = base64Data.firstIndex(of: ",") {
+            base64String = String(base64Data[base64Data.index(after: commaIndex)...])
+        } else {
+            base64String = base64Data
+        }
+        
+        guard let data = Data(base64Encoded: base64String) else {
+            showDownloadError("Failed to decode download data")
+            return
+        }
+        
+        saveBlobData(data, filename: filename, mimeType: mimeType)
+    }
+    
+    private func mimeTypeToExtension(_ mimeType: String) -> String {
+        let mimeMap: [String: String] = [
+            "image/png": "png",
+            "image/jpeg": "jpg",
+            "image/gif": "gif",
+            "image/webp": "webp",
+            "image/svg+xml": "svg",
+            "application/pdf": "pdf",
+            "application/zip": "zip",
+            "application/json": "json",
+            "text/plain": "txt",
+            "text/html": "html",
+            "text/css": "css",
+            "text/javascript": "js",
+            "application/javascript": "js",
+            "audio/mpeg": "mp3",
+            "audio/wav": "wav",
+            "video/mp4": "mp4",
+            "video/webm": "webm",
+            "application/octet-stream": "bin",
+            "text/markdown": "md",
+            "application/x-python": "py",
+            "text/x-python": "py"
+        ]
+        return mimeMap[mimeType] ?? mimeType.components(separatedBy: "/").last ?? "bin"
+    }
+    
+    private func saveBlobData(_ data: Data, filename: String, mimeType: String) {
+        DispatchQueue.main.async {
+            // Check if filename has an extension, if not add one based on mimeType
+            var finalFilename = filename
+            if !filename.contains(".") || filename.hasSuffix(".") {
+                let ext = self.mimeTypeToExtension(mimeType)
+                finalFilename = filename.hasSuffix(".") ? "\(filename)\(ext)" : "\(filename).\(ext)"
+            }
+            
+            let savePanel = NSSavePanel()
+            savePanel.nameFieldStringValue = finalFilename
+            savePanel.canCreateDirectories = true
+            savePanel.level = .floating  // Ensure panel appears above ChatBar
+            
+            savePanel.begin { response in
+                if response == .OK, let url = savePanel.url {
+                    do {
+                        try data.write(to: url)
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    } catch {
+                        self.showDownloadError("Failed to save file: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    private func showDownloadError(_ message: String) {
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Download Failed"
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
     }
 }
@@ -45,11 +139,12 @@ class WebViewModel {
     private var forwardObserver: NSKeyValueObservation?
     private var urlObserver: NSKeyValueObservation?
     private let consoleLogHandler = ConsoleLogHandler()
+    private let blobDownloadHandler = BlobDownloadHandler()
 
     // MARK: - Initialization
 
     init() {
-        self.wkWebView = Self.createWebView(consoleLogHandler: consoleLogHandler)
+        self.wkWebView = Self.createWebView(consoleLogHandler: consoleLogHandler, blobDownloadHandler: blobDownloadHandler)
         setupObservers()
         loadHome()
     }
@@ -98,7 +193,7 @@ class WebViewModel {
 
     // MARK: - Private Setup
 
-    private static func createWebView(consoleLogHandler: ConsoleLogHandler) -> WKWebView {
+    private static func createWebView(consoleLogHandler: ConsoleLogHandler, blobDownloadHandler: BlobDownloadHandler) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
@@ -113,6 +208,9 @@ class WebViewModel {
         #if DEBUG
         configuration.userContentController.add(consoleLogHandler, name: UserScripts.consoleLogHandler)
         #endif
+        
+        // Register blob download message handler
+        configuration.userContentController.add(blobDownloadHandler, name: UserScripts.blobDownloadHandler)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true

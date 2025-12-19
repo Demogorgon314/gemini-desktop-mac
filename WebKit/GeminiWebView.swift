@@ -42,6 +42,13 @@ struct GeminiWebView: NSViewRepresentable {
             let host = url.host?.lowercased() ?? ""
             let isGoogleDomain = host.hasSuffix("google.com") || host.hasSuffix("googleapis.com")
             
+            // Handle blob: URLs - cancel navigation, downloads are handled by injected script
+            if url.scheme == "blob" {
+                decisionHandler(.cancel)
+                // The injected JavaScript should have already handled the download
+                return
+            }
+            
             // For user-initiated link clicks to external sites, open in default browser
             if navigationAction.navigationType == .linkActivated && !isGoogleDomain {
                 NSWorkspace.shared.open(url)

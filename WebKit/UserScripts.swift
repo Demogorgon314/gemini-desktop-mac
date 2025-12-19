@@ -12,11 +12,15 @@ enum UserScripts {
 
     /// Message handler name for console log bridging
     static let consoleLogHandler = "consoleLog"
+    
+    /// Message handler name for blob downloads
+    static let blobDownloadHandler = "blobDownload"
 
     /// Creates all user scripts to be injected into the WebView
     static func createAllScripts() -> [WKUserScript] {
         var scripts: [WKUserScript] = [
-            createIMEFixScript()
+            createIMEFixScript(),
+            createBlobDownloadScript()
         ]
 
         #if DEBUG
@@ -41,6 +45,16 @@ enum UserScripts {
         WKUserScript(
             source: imeFixSource,
             injectionTime: .atDocumentEnd,
+            forMainFrameOnly: false
+        )
+    }
+    
+    /// Creates the blob download script that intercepts blob URL downloads
+    /// and sends the data to native Swift for saving
+    private static func createBlobDownloadScript() -> WKUserScript {
+        WKUserScript(
+            source: blobDownloadSource,
+            injectionTime: .atDocumentStart,
             forMainFrameOnly: false
         )
     }
@@ -266,6 +280,93 @@ enum UserScripts {
                 subtree: true
             });
         }
+    })();
+    """
+    
+    /// JavaScript to intercept blob downloads and send data to native Swift
+    /// This script overrides URL.createObjectURL and intercepts anchor clicks
+    /// to capture blob data before it's downloaded via blob: URLs
+    private static let blobDownloadSource = """
+    (function() {
+        'use strict';
+        
+        // Store original functions
+        const originalCreateObjectURL = URL.createObjectURL;
+        const originalRevokeObjectURL = URL.revokeObjectURL;
+        
+        // Map to store blob data
+        const blobMap = new Map();
+        
+        // Override URL.createObjectURL
+        URL.createObjectURL = function(blob) {
+            const url = originalCreateObjectURL.call(URL, blob);
+            if (blob instanceof Blob) {
+                blobMap.set(url, blob);
+            }
+            return url;
+        };
+        
+        // Override URL.revokeObjectURL
+        URL.revokeObjectURL = function(url) {
+            blobMap.delete(url);
+            return originalRevokeObjectURL.call(URL, url);
+        };
+        
+        // Intercept anchor clicks
+        document.addEventListener('click', function(e) {
+            const anchor = e.target.closest('a');
+            if (!anchor) return;
+            
+            const href = anchor.href;
+            if (!href || !href.startsWith('blob:')) return;
+            
+            const blob = blobMap.get(href);
+            if (!blob) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Read blob and send to native
+            const reader = new FileReader();
+            reader.onload = function() {
+                const base64Data = reader.result;
+                const filename = anchor.download || 'download';
+                const mimeType = blob.type || 'application/octet-stream';
+                
+                window.webkit.messageHandlers.blobDownload.postMessage({
+                    data: base64Data,
+                    filename: filename,
+                    mimeType: mimeType
+                });
+            };
+            reader.readAsDataURL(blob);
+        }, true);
+        
+        // Also intercept programmatic anchor clicks
+        const originalClick = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function() {
+            const href = this.href;
+            if (href && href.startsWith('blob:')) {
+                const blob = blobMap.get(href);
+                if (blob) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64Data = reader.result;
+                        const filename = this.download || 'download';
+                        const mimeType = blob.type || 'application/octet-stream';
+                        
+                        window.webkit.messageHandlers.blobDownload.postMessage({
+                            data: base64Data,
+                            filename: filename,
+                            mimeType: mimeType
+                        });
+                    };
+                    reader.readAsDataURL(blob);
+                    return;
+                }
+            }
+            return originalClick.call(this);
+        };
     })();
     """
 }
