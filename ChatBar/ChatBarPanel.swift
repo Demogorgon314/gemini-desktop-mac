@@ -50,7 +50,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
         })();
         """
 
-    // JavaScript to focus the input field and setup Enter key handler
+    // JavaScript to focus the input field
     private let focusInputScript = """
         (function() {
             const input = document.querySelector('rich-textarea[aria-label="Enter a prompt here"]') ||
@@ -63,27 +63,6 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
                 window.scrollTo(0, 0);
                 document.documentElement.scrollTop = 0;
                 document.body.scrollTop = 0;
-
-                // Add Enter key listener if not already added
-                if (!input.dataset.hasEnterHandler) {
-                    input.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            // Try to find the send button
-                            const sendButton = document.querySelector('button[aria-label="Send message"]') ||
-                                             document.querySelector('button.send-button') ||
-                                             document.querySelector('button[data-testid="send-button"]') ||
-                                             document.querySelector('button .material-symbols-outlined[data-test-id="send-icon"]')?.closest('button');
-                            
-                            if (sendButton) {
-                                sendButton.click();
-                            }
-                        }
-                    }, true); // Use capture to ensure we handle it first
-                    input.dataset.hasEnterHandler = 'true';
-                }
                 return true;
             }
             return false;
@@ -421,12 +400,12 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             adjustPanelHeight()
         }
     }
-    
+
     /// Adjust panel height based on input height and menu visibility
     private func adjustPanelHeight() {
         // Only adjust when not expanded (on start page or in basic chat bar mode)
         guard !isExpanded else { return }
-        
+
         var targetHeight: CGFloat = Constants.defaultHeight
 
         // 1. Consider Input Height
@@ -434,18 +413,18 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             let heightDiff = lastInputHeight - baseInputHeight
             targetHeight = max(Constants.defaultHeight, min(Constants.defaultHeight + heightDiff, Constants.maxInputExpandHeight))
         }
-        
+
         // 2. Consider Menu Visibility
         if isMenuVisible {
             // Expand to a taller height to accommodate menus
             targetHeight = max(targetHeight, Constants.menuExpandHeight)
         }
-        
+
         // Don't resize if panel height change is negligible
         guard abs(frame.height - targetHeight) > 2 else { return }
 
         print("[ChatBar] Adjusting height: inputHeight=\(lastInputHeight), isMenuVisible=\(isMenuVisible), oldHeight=\(frame.height), newHeight=\(targetHeight)")
-        
+
         let currentFrame = frame
         let newFrame = NSRect(
             x: currentFrame.origin.x,
@@ -588,7 +567,7 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
     func checkAndAdjustSize() {
         guard let webView = webView else { return }
 
-        // Focus the input field (and attaching handler)
+        // Focus the input field
         focusInput()
 
         webView.evaluateJavaScript(checkConversationScript) { [weak self] result, _ in
@@ -612,36 +591,36 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             }
         }
     }
-    
+
     /// Re-calculates and applies the correct expanded size for the current screen
     private func ensureValidExpandedSize() {
         guard isExpanded, let screen = currentScreen else { return }
-        
+
         let visibleFrame = screen.visibleFrame
         var newOriginY = frame.origin.y
-        
+
         // 1. Ensure bottom doesn't go below dock/screen bottom
         if newOriginY < visibleFrame.origin.y {
              newOriginY = visibleFrame.origin.y
         }
-        
+
         let maxAvailableHeight = visibleFrame.maxY - newOriginY
-        
+
         // Use the smaller of expandedHeight and available space, with some padding
         let targetHeight = min(self.expandedHeight, maxAvailableHeight - Constants.topPadding)
         let clampedHeight = max(targetHeight, initialSize.height)
-        
+
         // Only adjust if there's a significant difference (to avoid jitter) or if we moved the origin
         let heightChanged = abs(frame.height - clampedHeight) > 5
         let originChanged = abs(frame.origin.y - newOriginY) > 1
-        
+
         if heightChanged || originChanged {
             print("[ChatBar] Adjusting expanded size: y=\(newOriginY), height=\(clampedHeight)")
-            
+
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = Constants.animationDuration
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                
+
                 let newFrame = NSRect(
                     x: frame.origin.x,
                     y: newOriginY, // Use the potentially corrected Y
@@ -691,40 +670,40 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
-    
+
     // MARK: - Screen Boundary Handling
-    
+
     /// Constrain the window to stay within the current screen bounds
     func constrainToScreen() {
         guard let screen = currentScreen else { return }
         let screenFrame = screen.visibleFrame
         var newFrame = self.frame
-        
+
         // Ensure the window doesn't exceed screen height
         if newFrame.height > screenFrame.height {
             newFrame.size.height = screenFrame.height
         }
-        
+
         // Ensure the window doesn't go above the screen top
         if newFrame.maxY > screenFrame.maxY {
             newFrame.origin.y = screenFrame.maxY - newFrame.height
         }
-        
+
         // Ensure the window doesn't go below the screen bottom
         if newFrame.origin.y < screenFrame.origin.y {
             newFrame.origin.y = screenFrame.origin.y
         }
-        
+
         // Ensure the window doesn't go beyond the left edge
         if newFrame.origin.x < screenFrame.origin.x {
             newFrame.origin.x = screenFrame.origin.x
         }
-        
+
         // Ensure the window doesn't go beyond the right edge
         if newFrame.maxX > screenFrame.maxX {
             newFrame.origin.x = screenFrame.maxX - newFrame.width
         }
-        
+
         // Apply the constrained frame if it changed
         if newFrame != self.frame {
             setFrame(newFrame, display: true)
