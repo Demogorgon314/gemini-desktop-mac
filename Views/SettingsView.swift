@@ -9,7 +9,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.hideWindowAtLaunch.rawValue) private var hideWindowAtLaunch: Bool = false
     @AppStorage(UserDefaultsKeys.hideDockIcon.rawValue) private var hideDockIcon: Bool = false
     @AppStorage(UserDefaultsKeys.resetChatBarPosition.rawValue) private var resetChatBarPosition: Bool = true
-    @AppStorage(UserDefaultsKeys.leftClickAction.rawValue) private var leftClickAction: String = "chatBar"
+    @AppStorage(UserDefaultsKeys.leftClickAction.rawValue) private var leftClickAction: String = "menuBarPopover"
 
     @State private var showingResetAlert = false
     @State private var isClearing = false
@@ -30,8 +30,9 @@ struct SettingsView: View {
                         NSApp.setActivationPolicy(newValue ? .accessory : .regular)
                     }
                 Picker("Left-Click Action:", selection: $leftClickAction) {
-                    Text("Open ChatBar").tag("chatBar")
-                    Text("Open Main Window").tag("mainWindow")
+                    Text("Quick Chat (Popover)").tag("menuBarPopover")
+                    Text("Chat Bar").tag("chatBar")
+                    Text("Main Window").tag("mainWindow")
                 }
                 .pickerStyle(.menu)
             }

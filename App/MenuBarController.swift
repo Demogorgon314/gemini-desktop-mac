@@ -42,28 +42,39 @@ class MenuBarController: NSObject {
     }
     
     private func handleLeftClick() {
-        let leftClickAction = UserDefaults.standard.string(forKey: UserDefaultsKeys.leftClickAction.rawValue) ?? "chatBar"
-        
-        if leftClickAction == "mainWindow" {
+        guard let button = statusItem?.button else { return }
+
+        let leftClickAction = UserDefaults.standard.string(forKey: UserDefaultsKeys.leftClickAction.rawValue) ?? "menuBarPopover"
+
+        switch leftClickAction {
+        case "mainWindow":
             coordinator.toggleMainWindow()
-        } else {
+        case "chatBar":
             coordinator.toggleChatBar()
+        default:
+            // Default to menu bar popover
+            coordinator.toggleMenuBarPopover(below: button)
         }
     }
     
     private func showMenu() {
         let menu = NSMenu()
-        
+
         let openItem = NSMenuItem(title: "Open Gemini Desktop", action: #selector(openMainWindow), keyEquivalent: "")
         openItem.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
         openItem.target = self
         menu.addItem(openItem)
-        
+
+        let popoverItem = NSMenuItem(title: "Toggle Quick Chat", action: #selector(toggleMenuBarPopover), keyEquivalent: "")
+        popoverItem.image = NSImage(systemSymbolName: "bubble.left.fill", accessibilityDescription: nil)
+        popoverItem.target = self
+        menu.addItem(popoverItem)
+
         let chatBarItem = NSMenuItem(title: "Toggle Chat Bar", action: #selector(toggleChatBar), keyEquivalent: "")
         chatBarItem.image = NSImage(systemSymbolName: "rectangle.bottomhalf.inset.filled", accessibilityDescription: nil)
         chatBarItem.target = self
         menu.addItem(chatBarItem)
-        
+
         menu.addItem(NSMenuItem.separator())
         
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
@@ -89,6 +100,11 @@ class MenuBarController: NSObject {
     
     @objc private func toggleChatBar() {
         coordinator.toggleChatBar()
+    }
+
+    @objc private func toggleMenuBarPopover() {
+        guard let button = statusItem?.button else { return }
+        coordinator.toggleMenuBarPopover(below: button)
     }
     
     @objc private func openSettings() {

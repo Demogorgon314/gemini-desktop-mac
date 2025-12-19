@@ -16,8 +16,9 @@ extension Notification.Name {
 @Observable
 class AppCoordinator {
     static let shared = AppCoordinator()
-    
+
     private var chatBar: ChatBarPanel?
+    private var menuBarPopover: MenuBarPopoverPanel?
     var webViewModel = WebViewModel()
 
     var openWindowAction: ((String) -> Void)?
@@ -48,8 +49,9 @@ class AppCoordinator {
     // MARK: - Chat Bar
 
     func showChatBar() {
-        // Hide main window when showing chat bar
+        // Hide other windows first - WebView can only be in one view hierarchy
         closeMainWindow()
+        hideMenuBarPopoverImmediately()
 
         if let bar = chatBar {
             // Check if we should reset position to default
@@ -139,12 +141,63 @@ class AppCoordinator {
         let mainWindow = NSApp.windows.first(where: {
             $0.identifier?.rawValue == Constants.mainWindowIdentifier || $0.title == Constants.mainWindowTitle
         })
-        
+
         if let window = mainWindow, window.isVisible && window.isKeyWindow {
             closeMainWindow()
         } else {
             openMainWindow()
         }
+    }
+
+    // MARK: - Menu Bar Popover
+
+    func showMenuBarPopover(below statusItemButton: NSStatusBarButton) {
+        // Hide other windows first - WebView can only be in one view hierarchy
+        hideChatBar()
+        closeMainWindow()
+
+        if let popover = menuBarPopover {
+            popover.showPopover(below: statusItemButton)
+            return
+        }
+
+        let contentView = MenuBarPopoverView(
+            webView: webViewModel.wkWebView,
+            onExpandToMain: { [weak self] in
+                self?.expandFromPopoverToMainWindow()
+            },
+            onClose: { [weak self] in
+                self?.hideMenuBarPopover()
+            }
+        )
+        let hostingView = NSHostingView(rootView: contentView)
+        let popover = MenuBarPopoverPanel(contentView: hostingView)
+
+        popover.showPopover(below: statusItemButton)
+        menuBarPopover = popover
+    }
+
+    func hideMenuBarPopover() {
+        menuBarPopover?.hidePopover()
+    }
+
+    /// Hide popover immediately without animation (for transitioning to other views)
+    func hideMenuBarPopoverImmediately() {
+        menuBarPopover?.hidePopoverImmediately()
+    }
+
+    func toggleMenuBarPopover(below statusItemButton: NSStatusBarButton) {
+        if let popover = menuBarPopover, popover.isVisible {
+            hideMenuBarPopover()
+        } else {
+            showMenuBarPopover(below: statusItemButton)
+        }
+    }
+
+    private func expandFromPopoverToMainWindow() {
+        // Hide immediately without animation to release WebView from popover's view hierarchy
+        hideMenuBarPopoverImmediately()
+        openMainWindow()
     }
 
     func expandToMainWindow() {
@@ -159,8 +212,9 @@ class AppCoordinator {
     }
 
     func openMainWindow(on targetScreen: NSScreen? = nil) {
-        // Hide chat bar first - WebView can only be in one view hierarchy
+        // Hide other windows first - WebView can only be in one view hierarchy
         hideChatBar()
+        hideMenuBarPopoverImmediately()
 
         let hideDockIcon = UserDefaults.standard.bool(forKey: UserDefaultsKeys.hideDockIcon.rawValue)
         if !hideDockIcon {
@@ -188,7 +242,7 @@ class AppCoordinator {
             openWindowAction("main")
             // Position newly created window after a brief delay
             if let screen = targetScreen {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     if let window = NSApp.windows.first(where: {
                         $0.identifier?.rawValue == Constants.mainWindowIdentifier || $0.title == Constants.mainWindowTitle
                     }) {
