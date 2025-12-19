@@ -58,6 +58,9 @@ class MenuBarController: NSObject {
     }
     
     private func showMenu() {
+        // Hide popover first so it doesn't block the menu
+        coordinator.hideMenuBarPopover()
+
         let menu = NSMenu()
 
         let openItem = NSMenuItem(title: "Open Gemini Desktop", action: #selector(openMainWindow), keyEquivalent: "")
