@@ -598,6 +598,10 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
                     // In conversation - ensure expanded
                     if !self.isExpanded {
                         self.expandToNormalSize()
+                    } else {
+                        // Already expanded - but verify we fit on the current screen
+                        // This fixes the issue when moving between screens (e.g. vertical to horizontal)
+                        self.ensureValidExpandedSize()
                     }
                 } else {
                     // On start page - ensure initial size
@@ -608,6 +612,47 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
             }
         }
     }
+    
+    /// Re-calculates and applies the correct expanded size for the current screen
+    private func ensureValidExpandedSize() {
+        guard isExpanded, let screen = currentScreen else { return }
+        
+        let visibleFrame = screen.visibleFrame
+        var newOriginY = frame.origin.y
+        
+        // 1. Ensure bottom doesn't go below dock/screen bottom
+        if newOriginY < visibleFrame.origin.y {
+             newOriginY = visibleFrame.origin.y
+        }
+        
+        let maxAvailableHeight = visibleFrame.maxY - newOriginY
+        
+        // Use the smaller of expandedHeight and available space, with some padding
+        let targetHeight = min(self.expandedHeight, maxAvailableHeight - Constants.topPadding)
+        let clampedHeight = max(targetHeight, initialSize.height)
+        
+        // Only adjust if there's a significant difference (to avoid jitter) or if we moved the origin
+        let heightChanged = abs(frame.height - clampedHeight) > 5
+        let originChanged = abs(frame.origin.y - newOriginY) > 1
+        
+        if heightChanged || originChanged {
+            print("[ChatBar] Adjusting expanded size: y=\(newOriginY), height=\(clampedHeight)")
+            
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Constants.animationDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                
+                let newFrame = NSRect(
+                    x: frame.origin.x,
+                    y: newOriginY, // Use the potentially corrected Y
+                    width: frame.width,
+                    height: clampedHeight
+                )
+                self.animator().setFrame(newFrame, display: true)
+            }
+        }
+    }
+
 
     /// Focus the input field in the WebView
     func focusInput() {
