@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaultsKeys.hideDockIcon.rawValue) private var hideDockIcon: Bool = false
     @AppStorage(UserDefaultsKeys.resetChatBarPosition.rawValue) private var resetChatBarPosition: Bool = true
     @AppStorage(UserDefaultsKeys.leftClickAction.rawValue) private var leftClickAction: String = "menuBarPopover"
+    @AppStorage(UserDefaultsKeys.closeWindowOnClickOutside.rawValue) private var closeWindowOnClickOutside: Bool = true
 
     @State private var showingResetAlert = false
     @State private var isClearing = false
@@ -38,6 +39,7 @@ struct SettingsView: View {
             }
             Section("Chat Bar") {
                 Toggle("Reset Position When Shown", isOn: $resetChatBarPosition)
+                Toggle("Close on Click Outside", isOn: $closeWindowOnClickOutside)
             }
             Section("Keyboard Shortcuts") {
                 HStack {

@@ -475,7 +475,11 @@ class ChatBarPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WKNavigat
     private func setupClickOutsideMonitor() {
         clickOutsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             guard let self = self, self.isVisible else { return }
-            self.orderOut(nil)
+            // Check if the setting is enabled
+            let shouldClose = UserDefaults.standard.object(forKey: UserDefaultsKeys.closeWindowOnClickOutside.rawValue) as? Bool ?? true
+            if shouldClose {
+                self.orderOut(nil)
+            }
         }
     }
 

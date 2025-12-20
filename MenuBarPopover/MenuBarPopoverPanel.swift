@@ -313,7 +313,11 @@ class MenuBarPopoverPanel: NSPanel, NSWindowDelegate, WKScriptMessageHandler, WK
             let clickLocationInScreen = NSEvent.mouseLocation
 
             if !self.frame.contains(clickLocationInScreen) {
-                self.hidePopover()
+                // Check if the setting is enabled
+                let shouldClose = UserDefaults.standard.object(forKey: UserDefaultsKeys.closeWindowOnClickOutside.rawValue) as? Bool ?? true
+                if shouldClose {
+                    self.hidePopover()
+                }
             }
         }
     }

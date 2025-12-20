@@ -15,4 +15,5 @@ enum UserDefaultsKeys: String {
     case hideDockIcon
     case resetChatBarPosition
     case leftClickAction  // "menuBarPopover", "chatBar", or "mainWindow"
+    case closeWindowOnClickOutside  // Close floating windows when clicking outside
 }
