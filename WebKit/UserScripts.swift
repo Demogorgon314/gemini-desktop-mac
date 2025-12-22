@@ -111,19 +111,8 @@ enum UserScripts {
             imeJustEnded = false;
         }, true);
 
-        document.addEventListener('compositionupdate', function(e) {
-            console.log('[IME Debug] compositionupdate:', {
-                data: e.data,
-                target: e.target?.tagName
-            });
-        }, true);
-
         document.addEventListener('compositionend', function(e) {
-            console.log('[IME Debug] compositionend:', {
-                data: e.data,
-                target: e.target?.tagName,
-                previousImeActive: imeActive
-            });
+            
             imeActive = false;
             imeJustEnded = true;
             lastImeEndTime = Date.now();
